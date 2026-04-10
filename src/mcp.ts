@@ -15,6 +15,14 @@ import { resolveImageInput } from './resolve.js';
 import { quantizeToSprite } from './convert.js';
 import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES } from './constants.js';
 
+// Route import/export subcommands to CLI before starting MCP server
+const subcommand = process.argv[2];
+if (subcommand === 'import' || subcommand === 'export') {
+  const { runCLI } = await import('./cli.js');
+  await runCLI(process.argv.slice(2));
+  process.exit(0);
+}
+
 const server = new McpServer({
   name: 'pixscii',
   version: '0.1.0',
