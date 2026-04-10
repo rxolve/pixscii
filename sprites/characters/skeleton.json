@@ -25,5 +25,5 @@
     "helm": { "x": 5, "y": 0 },
     "weapon": { "x": 11, "y": 4 }
   },
-  "skinIndices": [7]
+  "skinIndices": []
 }

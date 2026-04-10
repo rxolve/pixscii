@@ -7,7 +7,7 @@ Sister project of [artscii](https://github.com/rxolve/artscii). While artscii pr
 ## Features
 
 - **22 curated sprites** — items, tiles, effects, UI elements
-- **864 procedural characters** — 4 species × 3 armors × 3 weapons × 4 helms × 6 skin tones
+- **648 procedural characters** — 4 species × 3 armors × 3 weapons × 4 helms × 6 skin tones
 - **Tilemap builder** — compose tile grids into full scenes
 - **Scene composer** — layer sprites at arbitrary positions
 - **6 animations** — idle, walk, attack, hurt, bounce, blink

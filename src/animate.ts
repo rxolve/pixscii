@@ -27,9 +27,7 @@ function squashSprite(sprite: SpriteData): SpriteData {
   const pixels = sprite.pixels.map((row) => [...row]);
   // Move bottom rows up by 1
   if (sprite.height >= 4) {
-    const lastRow = pixels[sprite.height - 1];
-    const secondLast = pixels[sprite.height - 2];
-    pixels[sprite.height - 2] = lastRow;
+    pixels[sprite.height - 2] = pixels[sprite.height - 1];
     pixels[sprite.height - 1] = new Array(sprite.width).fill(-1);
   }
   return { width: sprite.width, height: sprite.height, pixels };
@@ -63,7 +61,7 @@ function motionWalk(sprite: SpriteData): Animation {
     frames: [
       sprite,
       shiftSprite(sprite, 1, -1),
-      shiftSprite(sprite, 0, 0),
+      sprite,
       shiftSprite(sprite, -1, -1),
     ],
     delay: 150,

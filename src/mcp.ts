@@ -4,8 +4,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 
-import { loadPalettes, getPalette, listPalettes } from './palette.js';
-import { renderToBase64, renderToBuffer } from './render.js';
+import { loadPalettes, getPalette } from './palette.js';
+import { renderToBase64 } from './render.js';
 import { loadIndex, search, getById, getByCategory, getRandom, listCategories, listAll, loadSpriteData } from './store.js';
 import { loadCharacterAssets, generateCharacter, describeCharacter } from './character.js';
 import { composeScene } from './compose.js';
@@ -138,7 +138,7 @@ server.tool(
 // --- character tool ---
 server.tool(
   'character',
-  'Generate a procedural RPG character sprite. Same seed always produces the same character. 864 unique combinations.',
+  'Generate a procedural RPG character sprite. Same seed always produces the same character. 648 unique combinations.',
   {
     seed: z.string().max(MAX_SEED_LENGTH).describe('Seed string for deterministic generation. Same seed = same character.'),
     species: z.enum(SPECIES as unknown as [string, ...string[]]).optional().describe(`Species: ${SPECIES.join(', ')}`),

@@ -89,12 +89,12 @@ export function generateCharacter(options: CharacterOptions): SpriteData {
   const template = templates.get(species);
   if (!template) throw new Error(`Character template "${species}" not loaded`);
 
-  // Start with body, apply skin color
-  let sprite: SpriteData = recolorIndices(
-    { width: template.width, height: template.height, pixels: template.pixels },
-    template.skinIndices,
-    SKIN_TONES[skinIdx],
-  );
+  // Start with body (no recolor yet)
+  let sprite: SpriteData = {
+    width: template.width,
+    height: template.height,
+    pixels: template.pixels.map((row) => [...row]),
+  };
 
   // Layer: armor → head → helm → weapon (back to front)
   const armorPart = parts.get(`armor/${armor}`);
@@ -106,6 +106,9 @@ export function generateCharacter(options: CharacterOptions): SpriteData {
   if (headPart) {
     sprite = overlayPart(sprite, headPart, template.anchors.head.x, template.anchors.head.y);
   }
+
+  // Apply skin recolor AFTER head overlay so head + body match
+  sprite = recolorIndices(sprite, template.skinIndices, SKIN_TONES[skinIdx]);
 
   const helmPart = parts.get(`helms/${helm}`);
   if (helmPart) {
