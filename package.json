@@ -1,0 +1,54 @@
+{
+  "name": "pixscii",
+  "version": "0.1.0",
+  "description": "Curated pixel art MCP server for AI agents — RPG sprites, characters, tilemaps",
+  "mcpName": "io.github.rxolve/pixscii",
+  "type": "module",
+  "main": "./dist/mcp.js",
+  "bin": {
+    "pixscii": "dist/mcp.js"
+  },
+  "files": [
+    "dist/",
+    "sprites/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "tsx src/mcp.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "pixel-art",
+    "sprites",
+    "rpg",
+    "mcp",
+    "agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rxolve/pixscii.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "sharp": "^0.34.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp"
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "grayscale",
+  "name": "Grayscale",
+  "colors": [
+    { "index": 0, "hex": "#000000", "name": "black" },
+    { "index": 1, "hex": "#111111", "name": "grey-1" },
+    { "index": 2, "hex": "#222222", "name": "grey-2" },
+    { "index": 3, "hex": "#333333", "name": "grey-3" },
+    { "index": 4, "hex": "#444444", "name": "grey-4" },
+    { "index": 5, "hex": "#555555", "name": "grey-5" },
+    { "index": 6, "hex": "#777777", "name": "grey-6" },
+    { "index": 7, "hex": "#999999", "name": "grey-7" },
+    { "index": 8, "hex": "#AAAAAA", "name": "grey-8" },
+    { "index": 9, "hex": "#BBBBBB", "name": "grey-9" },
+    { "index": 10, "hex": "#CCCCCC", "name": "grey-10" },
+    { "index": 11, "hex": "#DDDDDD", "name": "grey-11" },
+    { "index": 12, "hex": "#E0E0E0", "name": "grey-12" },
+    { "index": 13, "hex": "#EEEEEE", "name": "grey-13" },
+    { "index": 14, "hex": "#F5F5F5", "name": "grey-14" },
+    { "index": 15, "hex": "#FFFFFF", "name": "white" }
+  ]
+}

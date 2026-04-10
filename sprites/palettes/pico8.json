@@ -1,0 +1,22 @@
+{
+  "id": "pico8",
+  "name": "PICO-8",
+  "colors": [
+    { "index": 0, "hex": "#000000", "name": "black" },
+    { "index": 1, "hex": "#1D2B53", "name": "dark-blue" },
+    { "index": 2, "hex": "#7E2553", "name": "dark-purple" },
+    { "index": 3, "hex": "#008751", "name": "dark-green" },
+    { "index": 4, "hex": "#AB5236", "name": "brown" },
+    { "index": 5, "hex": "#5F574F", "name": "dark-grey" },
+    { "index": 6, "hex": "#C2C3C7", "name": "light-grey" },
+    { "index": 7, "hex": "#FFF1E8", "name": "white" },
+    { "index": 8, "hex": "#FF004D", "name": "red" },
+    { "index": 9, "hex": "#FFA300", "name": "orange" },
+    { "index": 10, "hex": "#FFEC27", "name": "yellow" },
+    { "index": 11, "hex": "#00E436", "name": "green" },
+    { "index": 12, "hex": "#29ADFF", "name": "blue" },
+    { "index": 13, "hex": "#83769C", "name": "lavender" },
+    { "index": 14, "hex": "#FF77A8", "name": "pink" },
+    { "index": 15, "hex": "#FFCCAA", "name": "light-peach" }
+  ]
+}
