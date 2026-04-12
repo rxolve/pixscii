@@ -16,8 +16,9 @@ import { quantizeToSprite } from './convert.js';
 import { createEmpty, mergeHorizontal, mergeVertical, mergeGrid } from './sprite.js';
 import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas } from './canvas.js';
 import { setPixels, drawLine, drawRect, floodFill, mirrorH } from './draw.js';
-import { composeAllFrames, computeFrameCount } from './scene.js';
+import { composeAllFrames } from './scene.js';
 import type { ActorDef, SceneDef } from './scene.js';
+import type { SpriteData, MotionType } from './types.js';
 import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES, MAX_PIXELS_PER_BATCH, MAX_SEQUENCE_FRAMES, MAX_SEQUENCE_ACTORS, MAX_SEQUENCE_POSES, MAX_SPRITESHEET_FRAMES } from './constants.js';
 
 // Route import/export subcommands to CLI before starting MCP server
@@ -30,7 +31,7 @@ if (subcommand === 'import' || subcommand === 'export') {
 
 const server = new McpServer({
   name: 'pixscii',
-  version: '0.2.1',
+  version: '0.2.2',
 });
 
 // --- search tool ---
@@ -149,10 +150,10 @@ server.tool(
   'Generate a procedural RPG character sprite. Same seed always produces the same character. 648 unique combinations.',
   {
     seed: z.string().max(MAX_SEED_LENGTH).describe('Seed string for deterministic generation. Same seed = same character.'),
-    species: z.enum(SPECIES as unknown as [string, ...string[]]).optional().describe(`Species: ${SPECIES.join(', ')}`),
-    armor: z.enum(ARMORS as unknown as [string, ...string[]]).optional().describe(`Armor type: ${ARMORS.join(', ')}`),
-    weapon: z.enum(WEAPONS as unknown as [string, ...string[]]).optional().describe(`Weapon type: ${WEAPONS.join(', ')}`),
-    helm: z.enum(HELMS as unknown as [string, ...string[]]).optional().describe(`Helm type: ${HELMS.join(', ')}`),
+    species: z.enum(SPECIES).optional().describe(`Species: ${SPECIES.join(', ')}`),
+    armor: z.enum(ARMORS).optional().describe(`Armor type: ${ARMORS.join(', ')}`),
+    weapon: z.enum(WEAPONS).optional().describe(`Weapon type: ${WEAPONS.join(', ')}`),
+    helm: z.enum(HELMS).optional().describe(`Helm type: ${HELMS.join(', ')}`),
     skin: z.number().int().min(0).max(SKIN_TONES.length - 1).optional().describe(`Skin tone index 0-${SKIN_TONES.length - 1}`),
     scale: z.number().int().min(1).max(MAX_SCALE).optional().describe(`Scale factor (default ${DEFAULT_SCALE})`),
     palette: z.string().optional().describe('Palette ID (default "pico8")'),
@@ -189,7 +190,7 @@ server.tool(
   {
     id: z.string().optional().describe('Sprite ID to animate (use this OR seed)'),
     seed: z.string().max(MAX_SEED_LENGTH).optional().describe('Character seed to animate (use this OR id)'),
-    motion: z.enum(MOTION_TYPES as unknown as [string, ...string[]]).describe(`Motion type: ${MOTION_TYPES.join(', ')}`),
+    motion: z.enum(MOTION_TYPES).describe(`Motion type: ${MOTION_TYPES.join(', ')}`),
     scale: z.number().int().min(1).max(MAX_SCALE).optional().describe(`Scale factor (default ${DEFAULT_SCALE})`),
     palette: z.string().optional().describe('Palette ID (default "pico8")'),
   },
@@ -202,7 +203,7 @@ server.tool(
         };
       }
 
-      let sprite: import('./types.js').SpriteData;
+      let sprite: SpriteData;
       if (seed) {
         sprite = generateCharacter({ seed });
       } else {
@@ -217,7 +218,7 @@ server.tool(
       }
 
       const pal = getPalette(paletteId);
-      const anim = createAnimation(sprite, motion as import('./types.js').MotionType);
+      const anim = createAnimation(sprite, motion as MotionType);
 
       // Render all frames
       const frameImages = await Promise.all(
@@ -368,17 +369,8 @@ server.tool(
   async ({ width, height, fill, palette: paletteId }) => {
     try {
       const pal = getPalette(paletteId);
-      let data = createEmpty(width, height);
-      if (fill && fill !== '.') {
-        const c = parseColor(fill);
-        const coords: Array<{ x: number; y: number; color: number }> = [];
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            coords.push({ x, y, color: c });
-          }
-        }
-        data = setPixels(data, coords);
-      }
+      const fillColor = fill ? parseColor(fill) : -1;
+      const data = createEmpty(width, height, fillColor);
       const id = storeCanvas({ data, width, height, palette: pal.id, prev: null });
       const text = inspectCanvas(id, requireCanvas(id));
       return { content: [{ type: 'text' as const, text }] };
@@ -675,7 +667,7 @@ server.tool(
       const dir = direction ?? 'horizontal';
       const g = gap ?? 0;
 
-      let result: import('./types.js').SpriteData;
+      let result: SpriteData;
       if (dir === 'horizontal') {
         result = sprites.reduce((acc, s) => mergeHorizontal(acc, s, g));
       } else if (dir === 'vertical') {

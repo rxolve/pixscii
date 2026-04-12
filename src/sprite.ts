@@ -14,11 +14,11 @@ export async function loadSprite(filePath: string): Promise<SpriteData> {
   return JSON.parse(raw);
 }
 
-/** Create an empty (transparent) sprite grid */
-export function createEmpty(width: number, height: number): SpriteData {
+/** Create an empty (transparent) sprite grid, or filled with a color */
+export function createEmpty(width: number, height: number, fill: number = -1): SpriteData {
   const pixels: number[][] = [];
   for (let y = 0; y < height; y++) {
-    pixels.push(new Array(width).fill(-1));
+    pixels.push(new Array(width).fill(fill));
   }
   return { width, height, pixels };
 }

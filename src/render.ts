@@ -60,28 +60,7 @@ export function scaleNearestNeighbor(
   return dst;
 }
 
-/** Render sprite to PNG base64 string */
-export async function renderToBase64(
-  sprite: SpriteData,
-  palette: Palette,
-  scale?: number,
-): Promise<string> {
-  const s = Math.max(1, Math.min(scale ?? DEFAULT_SCALE, MAX_SCALE));
-  const rgba = expandToRGBA(sprite, palette);
-  const scaled = s === 1 ? rgba : scaleNearestNeighbor(rgba, sprite.width, sprite.height, s);
-  const width = sprite.width * s;
-  const height = sprite.height * s;
-
-  const png = await sharp(scaled, {
-    raw: { width, height, channels: 4 },
-  })
-    .png()
-    .toBuffer();
-
-  return png.toString('base64');
-}
-
-/** Render sprite to PNG buffer (for spritesheet assembly) */
+/** Render sprite to PNG buffer */
 export async function renderToBuffer(
   sprite: SpriteData,
   palette: Palette,
@@ -98,4 +77,14 @@ export async function renderToBuffer(
   })
     .png()
     .toBuffer();
+}
+
+/** Render sprite to PNG base64 string */
+export async function renderToBase64(
+  sprite: SpriteData,
+  palette: Palette,
+  scale?: number,
+): Promise<string> {
+  const buf = await renderToBuffer(sprite, palette, scale);
+  return buf.toString('base64');
 }

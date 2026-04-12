@@ -65,10 +65,8 @@ export async function loadCharacterAssets(): Promise<void> {
 
 // --- Character generation ---
 
-export function generateCharacter(options: CharacterOptions): SpriteData {
+function resolveOptions(options: CharacterOptions) {
   const hash = hashSeed(options.seed);
-
-  // Select parts (explicit or hash-derived)
   const species = options.species && SPECIES.includes(options.species as typeof SPECIES[number])
     ? options.species
     : SPECIES[selectIndex(hash, 0, SPECIES.length)];
@@ -84,6 +82,11 @@ export function generateCharacter(options: CharacterOptions): SpriteData {
   const skinIdx = options.skin != null && options.skin >= 0 && options.skin < SKIN_TONES.length
     ? options.skin
     : selectIndex(hash, 4, SKIN_TONES.length);
+  return { species, armor, weapon, helm, skinIdx };
+}
+
+export function generateCharacter(options: CharacterOptions): SpriteData {
+  const { species, armor, weapon, helm, skinIdx } = resolveOptions(options);
 
   // Get template
   const template = templates.get(species);
@@ -125,22 +128,6 @@ export function generateCharacter(options: CharacterOptions): SpriteData {
 
 /** Get human-readable description of generated character parts */
 export function describeCharacter(options: CharacterOptions): string {
-  const hash = hashSeed(options.seed);
-  const species = options.species && SPECIES.includes(options.species as typeof SPECIES[number])
-    ? options.species
-    : SPECIES[selectIndex(hash, 0, SPECIES.length)];
-  const armor = options.armor && ARMORS.includes(options.armor as typeof ARMORS[number])
-    ? options.armor
-    : ARMORS[selectIndex(hash, 1, ARMORS.length)];
-  const weapon = options.weapon && WEAPONS.includes(options.weapon as typeof WEAPONS[number])
-    ? options.weapon
-    : WEAPONS[selectIndex(hash, 2, WEAPONS.length)];
-  const helm = options.helm && HELMS.includes(options.helm as typeof HELMS[number])
-    ? options.helm
-    : HELMS[selectIndex(hash, 3, HELMS.length)];
-  const skinIdx = options.skin != null && options.skin >= 0 && options.skin < SKIN_TONES.length
-    ? options.skin
-    : selectIndex(hash, 4, SKIN_TONES.length);
-
+  const { species, armor, weapon, helm, skinIdx } = resolveOptions(options);
   return `${species} — ${armor} armor, ${weapon}, ${helm} helm, skin tone ${skinIdx}`;
 }

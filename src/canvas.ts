@@ -1,4 +1,4 @@
-import type { SpriteData, Canvas, Palette } from './types.js';
+import type { SpriteData, Canvas } from './types.js';
 import { MAX_CANVAS_COUNT, CANVAS_ID_PREFIX, INSPECT_FULL_THRESHOLD } from './constants.js';
 
 // --- Canvas store ---

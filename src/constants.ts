@@ -65,7 +65,7 @@ export const HELMS = ['hood', 'iron', 'crown'] as const;
 export const SKIN_TONES = [15, 14, 9, 4, 5, 0] as const;
 
 /** Maximum number of simultaneously held canvases */
-export const MAX_CANVAS_COUNT = 20;
+export const MAX_CANVAS_COUNT = 40;
 
 /** Maximum pixels settable in a single pixel batch call */
 export const MAX_PIXELS_PER_BATCH = 512;

@@ -80,13 +80,6 @@ export interface Animation {
   loop: boolean;
 }
 
-/** Compose layer definition */
-export interface ComposeLayer {
-  sprite: string;
-  x: number;
-  y: number;
-}
-
 /** In-memory editable canvas */
 export interface Canvas {
   data: SpriteData;

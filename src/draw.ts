@@ -104,10 +104,11 @@ export function floodFill(
   visited[startY * width + startX] = 1;
   let count = 0;
   let leaked = false;
+  let head = 0;
 
-  while (queue.length > 0) {
+  while (head < queue.length) {
     if (count >= MAX_FILL_AREA) break;
-    const [cx, cy] = queue.shift()!;
+    const [cx, cy] = queue[head++];
 
     if (pixels[cy][cx] !== targetColor) continue;
     pixels[cy][cx] = fillColor;
