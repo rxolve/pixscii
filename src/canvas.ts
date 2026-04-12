@@ -1,5 +1,5 @@
 import type { SpriteData, Canvas } from './types.js';
-import { MAX_CANVAS_COUNT, CANVAS_ID_PREFIX, INSPECT_FULL_THRESHOLD } from './constants.js';
+import { MAX_CANVAS_COUNT, CANVAS_ID_PREFIX, INSPECT_FULL_THRESHOLD, MAX_SNAPSHOTS_PER_CANVAS, MAX_SNAPSHOT_NAME_LENGTH } from './constants.js';
 
 // --- Canvas store ---
 
@@ -59,6 +59,7 @@ export interface CanvasMeta {
   palette: string;
   nonTransparent: number;
   hasUndo: boolean;
+  snapshotCount: number;
 }
 
 export function listCanvasesWithMeta(): CanvasMeta[] {
@@ -71,6 +72,7 @@ export function listCanvasesWithMeta(): CanvasMeta[] {
       palette: c.palette,
       nonTransparent: countNonTransparent(c.data),
       hasUndo: c.prev !== null,
+      snapshotCount: c.snapshots?.size ?? 0,
     });
   }
   return out;
@@ -87,6 +89,70 @@ export function cloneCanvas(sourceId: string): string {
     palette: src.palette,
     prev: null,
   });
+}
+
+/** Validate a snapshot name. */
+function validateSnapshotName(name: string): void {
+  if (name.length === 0) throw new Error('Snapshot name cannot be empty');
+  if (name.length > MAX_SNAPSHOT_NAME_LENGTH) {
+    throw new Error(`Snapshot name exceeds ${MAX_SNAPSHOT_NAME_LENGTH} chars`);
+  }
+}
+
+/** Save the current canvas state under a name. Returns the new snapshot count. */
+export function snapshotCanvas(id: string, name: string): number {
+  validateSnapshotName(name);
+  const c = requireCanvas(id);
+  const snapshots = c.snapshots ?? new Map<string, SpriteData>();
+  // Adding a new name (not overwriting) — enforce the limit.
+  if (!snapshots.has(name) && snapshots.size >= MAX_SNAPSHOTS_PER_CANVAS) {
+    throw new Error(
+      `Canvas "${id}" already holds ${MAX_SNAPSHOTS_PER_CANVAS} snapshots (max). Overwrite an existing name instead.`,
+    );
+  }
+  // Deep-copy the current pixels so later edits can't mutate the snapshot.
+  const copy: SpriteData = {
+    width: c.data.width,
+    height: c.data.height,
+    pixels: c.data.pixels.map((row) => [...row]),
+  };
+  snapshots.set(name, copy);
+  canvasStore.set(id, { ...c, snapshots });
+  return snapshots.size;
+}
+
+/** Restore a named snapshot onto a canvas. The current state becomes prev. */
+export function restoreSnapshot(id: string, name: string): void {
+  const c = requireCanvas(id);
+  const snap = c.snapshots?.get(name);
+  if (!snap) {
+    const available = c.snapshots ? [...c.snapshots.keys()] : [];
+    const list = available.length > 0 ? available.join(', ') : '(none)';
+    throw new Error(`Snapshot "${name}" not found on ${id}. Available: ${list}`);
+  }
+  // Deep-copy on restore so future edits don't mutate the snapshot.
+  const data: SpriteData = {
+    width: snap.width,
+    height: snap.height,
+    pixels: snap.pixels.map((row) => [...row]),
+  };
+  canvasStore.set(id, { ...c, data, prev: c.data });
+}
+
+/** List snapshot names on a canvas. */
+export function listSnapshots(id: string): string[] {
+  const c = requireCanvas(id);
+  return c.snapshots ? [...c.snapshots.keys()] : [];
+}
+
+/**
+ * Switch the palette mode of a canvas without touching pixel indices.
+ * Colors 0-F mean different RGB values under different palettes.
+ * Caller is responsible for validating paletteId against loaded palettes.
+ */
+export function setCanvasPalette(id: string, paletteId: string): void {
+  const c = requireCanvas(id);
+  canvasStore.set(id, { ...c, palette: paletteId });
 }
 
 /** Summary of a diff between two canvases */

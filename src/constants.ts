@@ -90,3 +90,9 @@ export const MAX_SEQUENCE_POSES = 8;
 
 /** Maximum frames in a spritesheet */
 export const MAX_SPRITESHEET_FRAMES = 32;
+
+/** Maximum named snapshots per canvas */
+export const MAX_SNAPSHOTS_PER_CANVAS = 16;
+
+/** Maximum snapshot name length */
+export const MAX_SNAPSHOT_NAME_LENGTH = 64;

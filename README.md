@@ -33,7 +33,7 @@ Or add to your MCP client config:
 }
 ```
 
-## Syscalls (19)
+## Syscalls (22)
 
 ### Source — allocate a canvas
 
@@ -55,6 +55,7 @@ Or add to your MCP client config:
 | `fill` | Flood fill from a point (with leak detection) |
 | `mirror` | Mirror left half to right half |
 | `undo` | Revert the last drawing operation |
+| `repalette` | Switch a canvas's palette mode without touching pixel indices |
 
 ### Observe — read canvas state
 
@@ -64,11 +65,13 @@ Or add to your MCP client config:
 | `list` | List every live canvas in the session (dimensions, palette, pixel count, undo state) |
 | `diff` | Pixel-level diff between two canvases — unchanged pixels as `=`, changes as the new color |
 
-### Process control — branch, reuse
+### Process control — branch, checkpoint, reuse
 
 | Syscall | Description |
 |------|-------------|
 | `clone` | Fork a canvas into a fresh ID so you can branch edits safely |
+| `snapshot` | Save the current canvas state under a name (multi-step checkpoint beyond single `undo`) |
+| `restore` | Restore a named snapshot; current state becomes `prev` so you can still `undo` the restore |
 
 ### Compose & output
 
@@ -150,12 +153,47 @@ Sometimes the agent wants to try a change without losing the current state. The 
 ```
 → list {}
 ← Live canvases (3):
-  - cvs-a3f2-001 | 16x16 | palette: pico8 | pixels: 78/256  | undo: yes
-  - cvs-b3c5-002 | 16x16 | palette: pico8 | pixels: 142/256 | undo: no
-  - cvs-e4f7-005 | 64x64 | palette: pico8 | pixels: 2048/4096 | undo: no
+  - cvs-a3f2-001 | 16x16 | palette: pico8 | pixels: 78/256  | undo: yes | snapshots: 2
+  - cvs-b3c5-002 | 16x16 | palette: pico8 | pixels: 142/256 | undo: no  | snapshots: 0
+  - cvs-e4f7-005 | 64x64 | palette: pico8 | pixels: 2048/4096 | undo: no | snapshots: 0
 ```
 
 Useful when an agent loses track of which canvas holds what — especially after a long `compose` / `tilemap` / `character` chain.
+
+## Checkpoints with `snapshot` / `restore`
+
+`undo` only remembers one step back. For longer experiments — "let me try this, and if it's worse, roll back three edits" — use named snapshots.
+
+```
+→ snapshot { canvas_id: "cvs-a3f2-001", name: "before-shading" }
+← Snapshot "before-shading" saved on cvs-a3f2-001. (1 total: before-shading)
+
+→ rect { canvas_id: "cvs-a3f2-001", ... }   ← experimental shading pass
+→ fill { canvas_id: "cvs-a3f2-001", ... }
+→ pixel { canvas_id: "cvs-a3f2-001", ... }
+
+→ inspect { canvas_id: "cvs-a3f2-001" }
+← (agent decides the shading made it worse)
+
+→ restore { canvas_id: "cvs-a3f2-001", name: "before-shading" }
+← Restored "before-shading" onto cvs-a3f2-001. (current state becomes prev — agent can still undo the restore)
+```
+
+Snapshots are isolated deep copies — later edits on the live canvas cannot corrupt them. Up to 16 named snapshots per canvas.
+
+## Palette as a mode: `repalette`
+
+Because colors are just hex indices `0-F`, the same pixel data renders differently under different palettes. `repalette` flips the mode without touching a single pixel.
+
+```
+→ get { id: "sword" }                             ← loads under pico8
+→ repalette { canvas_id: "...", palette: "gameboy" }
+→ export { canvas_id: "...", scale: 4 }           ← same sword, Game Boy green
+→ repalette { canvas_id: "...", palette: "grayscale" }
+→ export { canvas_id: "...", scale: 4 }           ← same sword, grayscale
+```
+
+Zero pixel mutation, three aesthetics from one canvas.
 
 ## Example: Drawing a Health Potion from Scratch
 

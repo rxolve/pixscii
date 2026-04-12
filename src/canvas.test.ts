@@ -12,8 +12,13 @@ import {
   listCanvasesWithMeta,
   cloneCanvas,
   diffCanvases,
+  snapshotCanvas,
+  restoreSnapshot,
+  listSnapshots,
+  setCanvasPalette,
   _resetStore,
 } from './canvas.js';
+import { MAX_SNAPSHOTS_PER_CANVAS } from './constants.js';
 import type { Canvas, SpriteData } from './types.js';
 import { CANVAS_ID_PREFIX, MAX_CANVAS_COUNT } from './constants.js';
 
@@ -272,5 +277,110 @@ describe('diffCanvases', () => {
     const aId = storeCanvas(makeCanvas(4, 4));
     const bId = storeCanvas(makeCanvas(8, 8));
     expect(() => diffCanvases(aId, bId)).toThrow('size mismatch');
+  });
+});
+
+describe('snapshotCanvas / restoreSnapshot', () => {
+  it('saves and restores a named snapshot', () => {
+    const c = makeCanvas(2, 2);
+    c.data.pixels[0][0] = 1;
+    const id = storeCanvas(c);
+
+    snapshotCanvas(id, 'start');
+    // Mutate the canvas.
+    updateCanvas(id, { width: 2, height: 2, pixels: [[9, 9], [9, 9]] });
+    expect(requireCanvas(id).data.pixels[0][0]).toBe(9);
+
+    restoreSnapshot(id, 'start');
+    expect(requireCanvas(id).data.pixels[0][0]).toBe(1);
+  });
+
+  it('restore sets prev so undo can revert the restore', () => {
+    const c = makeCanvas(2, 2);
+    c.data.pixels[0][0] = 1;
+    const id = storeCanvas(c);
+
+    snapshotCanvas(id, 's');
+    updateCanvas(id, { width: 2, height: 2, pixels: [[9, 9], [9, 9]] });
+    const before = requireCanvas(id).data;
+
+    restoreSnapshot(id, 's');
+    expect(requireCanvas(id).prev).toBe(before);
+  });
+
+  it('snapshots are isolated from later edits', () => {
+    const c = makeCanvas(2, 2);
+    c.data.pixels[0][0] = 3;
+    const id = storeCanvas(c);
+
+    snapshotCanvas(id, 's');
+    // Mutate the live canvas after snapshotting.
+    const live = requireCanvas(id);
+    live.data.pixels[0][0] = 7;
+
+    restoreSnapshot(id, 's');
+    expect(requireCanvas(id).data.pixels[0][0]).toBe(3);
+  });
+
+  it('overwriting a snapshot name keeps the count stable', () => {
+    const c = makeCanvas(2, 2);
+    const id = storeCanvas(c);
+    expect(snapshotCanvas(id, 'a')).toBe(1);
+    expect(snapshotCanvas(id, 'a')).toBe(1);
+    expect(snapshotCanvas(id, 'b')).toBe(2);
+  });
+
+  it('listSnapshots reflects saved names', () => {
+    const c = makeCanvas(2, 2);
+    const id = storeCanvas(c);
+    snapshotCanvas(id, 'x');
+    snapshotCanvas(id, 'y');
+    expect(listSnapshots(id).sort()).toEqual(['x', 'y']);
+  });
+
+  it('throws when restoring an unknown name, with available names in the message', () => {
+    const c = makeCanvas(2, 2);
+    const id = storeCanvas(c);
+    snapshotCanvas(id, 'only');
+    expect(() => restoreSnapshot(id, 'missing')).toThrow(/only/);
+  });
+
+  it('rejects empty names', () => {
+    const c = makeCanvas(2, 2);
+    const id = storeCanvas(c);
+    expect(() => snapshotCanvas(id, '')).toThrow('cannot be empty');
+  });
+
+  it('enforces the per-canvas snapshot limit', () => {
+    const c = makeCanvas(2, 2);
+    const id = storeCanvas(c);
+    for (let i = 0; i < MAX_SNAPSHOTS_PER_CANVAS; i++) {
+      snapshotCanvas(id, `n${i}`);
+    }
+    expect(() => snapshotCanvas(id, 'overflow')).toThrow(/max/);
+    // Overwriting an existing name is still allowed at the limit.
+    expect(() => snapshotCanvas(id, 'n0')).not.toThrow();
+  });
+
+  it('snapshotCount surfaces through listCanvasesWithMeta', () => {
+    const c = makeCanvas(2, 2);
+    const id = storeCanvas(c);
+    snapshotCanvas(id, 'a');
+    snapshotCanvas(id, 'b');
+    const meta = listCanvasesWithMeta().find((m) => m.id === id)!;
+    expect(meta.snapshotCount).toBe(2);
+  });
+});
+
+describe('setCanvasPalette', () => {
+  it('updates the palette id without touching pixel data', () => {
+    const c = makeCanvas(2, 2);
+    c.data.pixels[0][0] = 5;
+    const id = storeCanvas(c);
+
+    setCanvasPalette(id, 'grayscale');
+    const updated = requireCanvas(id);
+    expect(updated.palette).toBe('grayscale');
+    expect(updated.data.pixels[0][0]).toBe(5);
   });
 });

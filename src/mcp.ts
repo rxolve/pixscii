@@ -14,12 +14,13 @@ import { createAnimation, MOTION_TYPES } from './animate.js';
 import { resolveImageInput } from './resolve.js';
 import { quantizeToSprite } from './convert.js';
 import { createEmpty, mergeHorizontal, mergeVertical, mergeGrid } from './sprite.js';
-import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas, listCanvasesWithMeta, cloneCanvas, diffCanvases } from './canvas.js';
+import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas, listCanvasesWithMeta, cloneCanvas, diffCanvases, snapshotCanvas, restoreSnapshot, listSnapshots, setCanvasPalette } from './canvas.js';
+import { listPalettes } from './palette.js';
 import { setPixels, drawLine, drawRect, floodFill, mirrorH } from './draw.js';
 import { composeAllFrames } from './scene.js';
 import type { ActorDef, SceneDef } from './scene.js';
 import type { SpriteData, MotionType } from './types.js';
-import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES, MAX_PIXELS_PER_BATCH, MAX_SEQUENCE_FRAMES, MAX_SEQUENCE_ACTORS, MAX_SEQUENCE_POSES, MAX_SPRITESHEET_FRAMES } from './constants.js';
+import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES, MAX_PIXELS_PER_BATCH, MAX_SEQUENCE_FRAMES, MAX_SEQUENCE_ACTORS, MAX_SEQUENCE_POSES, MAX_SPRITESHEET_FRAMES, MAX_SNAPSHOT_NAME_LENGTH } from './constants.js';
 
 // Route import/export subcommands to CLI before starting MCP server
 const subcommand = process.argv[2];
@@ -573,7 +574,7 @@ server.tool(
       }
       const lines = metas.map(
         (m) =>
-          `- ${m.id} | ${m.width}x${m.height} | palette: ${m.palette} | pixels: ${m.nonTransparent}/${m.width * m.height} | undo: ${m.hasUndo ? 'yes' : 'no'}`,
+          `- ${m.id} | ${m.width}x${m.height} | palette: ${m.palette} | pixels: ${m.nonTransparent}/${m.width * m.height} | undo: ${m.hasUndo ? 'yes' : 'no'} | snapshots: ${m.snapshotCount}`,
       );
       const text = `Live canvases (${metas.length}):\n${lines.join('\n')}`;
       return { content: [{ type: 'text' as const, text }] };
@@ -618,6 +619,84 @@ server.tool(
       const header = `diff: ${a} -> ${b}\nsize: ${summary.width}x${summary.height} | changed: ${summary.changed}/${total}`;
       return {
         content: [{ type: 'text' as const, text: `${header}\n\n${summary.grid}` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- snapshot tool ---
+server.tool(
+  'snapshot',
+  'Save the current canvas state under a name. Multiple named checkpoints per canvas, beyond single-step undo. Overwrites if the name already exists.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    name: z.string().min(1).max(MAX_SNAPSHOT_NAME_LENGTH).describe('Snapshot name (e.g. "before-fill", "v1")'),
+  },
+  async ({ canvas_id, name }) => {
+    try {
+      const count = snapshotCanvas(canvas_id, name);
+      const names = listSnapshots(canvas_id);
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Snapshot "${name}" saved on ${canvas_id}. (${count} total: ${names.join(', ')})`,
+        }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- restore tool ---
+server.tool(
+  'restore',
+  'Restore a named snapshot onto a canvas. The current state becomes "prev" so you can undo the restore.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    name: z.string().describe('Snapshot name to restore'),
+  },
+  async ({ canvas_id, name }) => {
+    try {
+      restoreSnapshot(canvas_id, name);
+      const grid = inspectCanvas(canvas_id, requireCanvas(canvas_id));
+      return {
+        content: [{ type: 'text' as const, text: `Restored "${name}" onto ${canvas_id}.\n\n${grid}` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- repalette tool ---
+server.tool(
+  'repalette',
+  'Switch the palette mode of a canvas without changing pixel indices. Hex chars stay the same; only the RGB colors they map to change. Use to re-render the same sprite in pico8, grayscale, or gameboy.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    palette: z.string().describe('New palette ID (e.g. "pico8", "grayscale", "gameboy")'),
+  },
+  async ({ canvas_id, palette: paletteId }) => {
+    try {
+      const available = listPalettes();
+      if (!available.includes(paletteId)) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Palette "${paletteId}" not loaded. Available: ${available.join(', ')}`,
+          }],
+          isError: true,
+        };
+      }
+      setCanvasPalette(canvas_id, paletteId);
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Palette of ${canvas_id} switched to "${paletteId}". Pixel data unchanged. Call export to render.`,
+        }],
       };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };

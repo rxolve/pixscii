@@ -87,6 +87,7 @@ export interface Canvas {
   height: number;
   palette: string;
   prev: SpriteData | null;
+  snapshots?: Map<string, SpriteData>;
 }
 
 /** Result of a flood fill operation */
