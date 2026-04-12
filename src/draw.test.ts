@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { setPixels, drawLine, drawRect, floodFill, mirrorH } from './draw.js';
+import { setPixels, drawLine, drawRect, floodFill, mirrorH, copyRegion } from './draw.js';
 import { createEmpty } from './sprite.js';
 import type { SpriteData } from './types.js';
 
@@ -212,5 +212,83 @@ describe('mirrorH', () => {
     expect(r.pixels[0][2]).toBe(9); // center unchanged
     expect(r.pixels[0][4]).toBe(1);
     expect(r.pixels[0][3]).toBe(2);
+  });
+});
+
+describe('copyRegion', () => {
+  it('copies an entire small source into a destination', () => {
+    const src = makeSprite(2, 2);
+    src.pixels = [[1, 2], [3, 4]];
+    const dst = makeSprite(4, 4);
+    const r = copyRegion(src, dst, { dx: 1, dy: 1 });
+    expect(r.pixels[1][1]).toBe(1);
+    expect(r.pixels[1][2]).toBe(2);
+    expect(r.pixels[2][1]).toBe(3);
+    expect(r.pixels[2][2]).toBe(4);
+    // Uncovered destination pixels remain transparent.
+    expect(r.pixels[0][0]).toBe(-1);
+  });
+
+  it('copies a sub-region when sx/sy/w/h are specified', () => {
+    const src = makeSprite(4, 4);
+    src.pixels = [
+      [0, 0, 0, 0],
+      [0, 1, 2, 0],
+      [0, 3, 4, 0],
+      [0, 0, 0, 0],
+    ];
+    const dst = makeSprite(4, 4);
+    const r = copyRegion(src, dst, { sx: 1, sy: 1, w: 2, h: 2, dx: 0, dy: 0 });
+    expect(r.pixels[0][0]).toBe(1);
+    expect(r.pixels[0][1]).toBe(2);
+    expect(r.pixels[1][0]).toBe(3);
+    expect(r.pixels[1][1]).toBe(4);
+  });
+
+  it('skips transparent source pixels by default', () => {
+    const src = makeSprite(2, 2);
+    src.pixels = [[-1, 5], [5, -1]];
+    const dst = makeSprite(2, 2, 9);
+    const r = copyRegion(src, dst, { dx: 0, dy: 0 });
+    expect(r.pixels[0][0]).toBe(9); // transparent skipped
+    expect(r.pixels[0][1]).toBe(5);
+    expect(r.pixels[1][0]).toBe(5);
+    expect(r.pixels[1][1]).toBe(9); // transparent skipped
+  });
+
+  it('overwrites transparent source pixels when include_transparent is true', () => {
+    const src = makeSprite(2, 2);
+    src.pixels = [[-1, 5], [5, -1]];
+    const dst = makeSprite(2, 2, 9);
+    const r = copyRegion(src, dst, { dx: 0, dy: 0, includeTransparent: true });
+    expect(r.pixels[0][0]).toBe(-1);
+    expect(r.pixels[1][1]).toBe(-1);
+  });
+
+  it('clips destination writes to bounds', () => {
+    const src = makeSprite(2, 2);
+    src.pixels = [[1, 2], [3, 4]];
+    const dst = makeSprite(2, 2);
+    const r = copyRegion(src, dst, { dx: 1, dy: 1 });
+    // Only (1,1) gets src[0][0] = 1; the rest of the region goes off-canvas.
+    expect(r.pixels[1][1]).toBe(1);
+    expect(r.pixels[0][0]).toBe(-1);
+  });
+
+  it('does not mutate the source', () => {
+    const src = makeSprite(2, 2);
+    src.pixels = [[1, 2], [3, 4]];
+    const dst = makeSprite(2, 2);
+    copyRegion(src, dst, { dx: 0, dy: 0 });
+    expect(src.pixels).toEqual([[1, 2], [3, 4]]);
+  });
+
+  it('self-copy with overlap reads the original region, not the partially written result', () => {
+    // A horizontal shift: copy src[0..3, 0] onto src[1..4, 0].
+    // If the write aliased the read we'd get a smear; the buffered copy must not.
+    const s = makeSprite(4, 1);
+    s.pixels[0] = [1, 2, 3, 4];
+    const r = copyRegion(s, s, { sx: 0, sy: 0, w: 3, h: 1, dx: 1, dy: 0 });
+    expect(r.pixels[0]).toEqual([1, 1, 2, 3]);
   });
 });

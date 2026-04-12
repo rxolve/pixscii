@@ -137,6 +137,68 @@ export function floodFill(
   return { result: { width, height, pixels }, count, leaked };
 }
 
+/** Options for copyRegion */
+export interface CopyRegionOptions {
+  sx?: number;
+  sy?: number;
+  w?: number;
+  h?: number;
+  dx: number;
+  dy: number;
+  /** If true, transparent source pixels overwrite the destination.
+   *  If false (default), transparent source pixels are skipped. */
+  includeTransparent?: boolean;
+}
+
+/**
+ * Blit a rectangular region from src onto dst at (dx, dy).
+ * Safe for self-copy (src === dst) with overlapping regions — the source
+ * region is buffered before writing to the destination.
+ * Out-of-bounds destination pixels are skipped silently.
+ */
+export function copyRegion(
+  src: SpriteData,
+  dst: SpriteData,
+  opts: CopyRegionOptions,
+): SpriteData {
+  const sx = opts.sx ?? 0;
+  const sy = opts.sy ?? 0;
+  const w = opts.w ?? src.width - sx;
+  const h = opts.h ?? src.height - sy;
+  const { dx, dy, includeTransparent } = opts;
+
+  // Buffer the source region first so self-copies with overlap work.
+  const buffer: number[][] = [];
+  for (let y = 0; y < h; y++) {
+    const row: number[] = [];
+    const ry = sy + y;
+    for (let x = 0; x < w; x++) {
+      const rx = sx + x;
+      if (rx < 0 || rx >= src.width || ry < 0 || ry >= src.height) {
+        row.push(-1);
+      } else {
+        row.push(src.pixels[ry][rx]);
+      }
+    }
+    buffer.push(row);
+  }
+
+  const pixels = dst.pixels.map((row) => [...row]);
+  for (let y = 0; y < h; y++) {
+    const ty = dy + y;
+    if (ty < 0 || ty >= dst.height) continue;
+    for (let x = 0; x < w; x++) {
+      const tx = dx + x;
+      if (tx < 0 || tx >= dst.width) continue;
+      const val = buffer[y][x];
+      if (val < 0 && !includeTransparent) continue;
+      pixels[ty][tx] = val;
+    }
+  }
+
+  return { width: dst.width, height: dst.height, pixels };
+}
+
 /** Mirror sprite horizontally (left half → right half) */
 export function mirrorH(sprite: SpriteData, axisX?: number): SpriteData {
   const { width, height } = sprite;

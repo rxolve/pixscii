@@ -14,9 +14,9 @@ import { createAnimation, MOTION_TYPES } from './animate.js';
 import { resolveImageInput } from './resolve.js';
 import { quantizeToSprite } from './convert.js';
 import { createEmpty, mergeHorizontal, mergeVertical, mergeGrid } from './sprite.js';
-import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas, listCanvasesWithMeta, cloneCanvas, diffCanvases, snapshotCanvas, restoreSnapshot, listSnapshots, setCanvasPalette } from './canvas.js';
+import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas, listCanvasesWithMeta, cloneCanvas, diffCanvases, snapshotCanvas, restoreSnapshot, listSnapshots, setCanvasPalette, deleteCanvas, listCanvases } from './canvas.js';
 import { listPalettes } from './palette.js';
-import { setPixels, drawLine, drawRect, floodFill, mirrorH } from './draw.js';
+import { setPixels, drawLine, drawRect, floodFill, mirrorH, copyRegion } from './draw.js';
 import { composeAllFrames } from './scene.js';
 import type { ActorDef, SceneDef } from './scene.js';
 import type { SpriteData, MotionType } from './types.js';
@@ -619,6 +619,71 @@ server.tool(
       const header = `diff: ${a} -> ${b}\nsize: ${summary.width}x${summary.height} | changed: ${summary.changed}/${total}`;
       return {
         content: [{ type: 'text' as const, text: `${header}\n\n${summary.grid}` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- kill tool ---
+server.tool(
+  'kill',
+  'Free a canvas slot. Removes the canvas and its snapshots from the session. Use this to reclaim space before hitting the 40-canvas FIFO eviction limit.',
+  {
+    canvas_id: z.string().describe('Canvas ID to remove'),
+  },
+  async ({ canvas_id }) => {
+    try {
+      const existed = deleteCanvas(canvas_id);
+      if (!existed) {
+        return {
+          content: [{ type: 'text' as const, text: `Canvas "${canvas_id}" not found.` }],
+          isError: true,
+        };
+      }
+      const remaining = listCanvases().length;
+      return {
+        content: [{ type: 'text' as const, text: `Killed ${canvas_id}. ${remaining} canvas(es) remain.` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- copy tool ---
+server.tool(
+  'copy',
+  'Blit a rectangular region from one canvas onto another at a target position. Transparent source pixels are skipped by default (use include_transparent to overwrite). Source and destination can be the same canvas — overlapping regions are handled safely.',
+  {
+    src: z.string().describe('Source canvas ID'),
+    dst: z.string().describe('Destination canvas ID (may equal src)'),
+    sx: z.number().int().optional().describe('Source region top-left X (default 0)'),
+    sy: z.number().int().optional().describe('Source region top-left Y (default 0)'),
+    w: z.number().int().min(1).optional().describe('Region width (default: source width - sx)'),
+    h: z.number().int().min(1).optional().describe('Region height (default: source height - sy)'),
+    dx: z.number().int().describe('Destination top-left X'),
+    dy: z.number().int().describe('Destination top-left Y'),
+    include_transparent: z.boolean().optional().describe('If true, transparent source pixels overwrite the destination (default false)'),
+  },
+  async ({ src, dst, sx, sy, w, h, dx, dy, include_transparent }) => {
+    try {
+      const srcCanvas = requireCanvas(src);
+      const dstCanvas = requireCanvas(dst);
+      const newData = copyRegion(srcCanvas.data, dstCanvas.data, {
+        sx, sy, w, h, dx, dy,
+        includeTransparent: include_transparent,
+      });
+      updateCanvas(dst, newData);
+      const grid = inspectCanvas(dst, requireCanvas(dst));
+      const regionW = w ?? srcCanvas.data.width - (sx ?? 0);
+      const regionH = h ?? srcCanvas.data.height - (sy ?? 0);
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Copied ${regionW}x${regionH} from ${src}(${sx ?? 0},${sy ?? 0}) to ${dst}(${dx},${dy}).\n\n${grid}`,
+        }],
       };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };

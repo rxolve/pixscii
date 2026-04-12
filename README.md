@@ -33,7 +33,7 @@ Or add to your MCP client config:
 }
 ```
 
-## Syscalls (22)
+## Syscalls (24)
 
 ### Source — allocate a canvas
 
@@ -55,6 +55,7 @@ Or add to your MCP client config:
 | `fill` | Flood fill from a point (with leak detection) |
 | `mirror` | Mirror left half to right half |
 | `undo` | Revert the last drawing operation |
+| `copy` | Blit a rectangular region from one canvas onto another (supports self-copy with overlap) |
 | `repalette` | Switch a canvas's palette mode without touching pixel indices |
 
 ### Observe — read canvas state
@@ -72,6 +73,7 @@ Or add to your MCP client config:
 | `clone` | Fork a canvas into a fresh ID so you can branch edits safely |
 | `snapshot` | Save the current canvas state under a name (multi-step checkpoint beyond single `undo`) |
 | `restore` | Restore a named snapshot; current state becomes `prev` so you can still `undo` the restore |
+| `kill` | Free a canvas slot (and its snapshots) so the 40-canvas FIFO limit doesn't evict something you care about |
 
 ### Compose & output
 
@@ -194,6 +196,39 @@ Because colors are just hex indices `0-F`, the same pixel data renders different
 ```
 
 Zero pixel mutation, three aesthetics from one canvas.
+
+## Blitting with `copy`
+
+`copy` is the pixel-level `memcpy` — move a rectangular region from one canvas onto another, at any position. Transparent source pixels are skipped by default, so you can stamp a foreground sprite onto a background without carrying a square mask.
+
+```
+→ create { width: 32, height: 32, fill: "." }
+← canvas_id: cvs-bg-001
+
+→ get { id: "sword" }
+← canvas_id: cvs-sw-002 (16x16)
+
+→ copy { src: "cvs-sw-002", dst: "cvs-bg-001", dx: 8, dy: 8 }
+← Copied 16x16 from cvs-sw-002(0,0) to cvs-bg-001(8,8).
+```
+
+Useful for:
+- Stamping a reusable motif (eye, rune, tile) at multiple positions.
+- Self-copy: shifting a region on one canvas by passing the same ID as `src` and `dst`. Overlapping reads/writes are handled safely — the source region is buffered before any destination write.
+- Extracting a sub-region: `sx, sy, w, h` pick the source rectangle; omit them to copy the whole source.
+
+Set `include_transparent: true` if you actually want the transparent source pixels to erase the destination (rare, but there when you need it).
+
+## Freeing slots with `kill`
+
+The session holds at most 40 live canvases. Beyond that, the oldest is evicted FIFO. That's usually fine — but if you've just built a valuable composed scene and an agent keeps spawning experimental canvases, the scene can get evicted out from under you. `kill` gives the agent explicit control:
+
+```
+→ kill { canvas_id: "cvs-scratch-003" }
+← Killed cvs-scratch-003. 12 canvas(es) remain.
+```
+
+Kills the canvas and all its snapshots. Reclaims one slot.
 
 ## Example: Drawing a Health Potion from Scratch
 
