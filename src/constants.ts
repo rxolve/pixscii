@@ -90,3 +90,15 @@ export const MAX_SEQUENCE_POSES = 8;
 
 /** Maximum frames in a spritesheet */
 export const MAX_SPRITESHEET_FRAMES = 32;
+
+/** Maximum actors in animate_scene */
+export const MAX_SCENE_ACTORS = 8;
+
+/** Maximum frames in animate_scene */
+export const MAX_SCENE_FRAMES = 32;
+
+/** Default frame count for animate_scene */
+export const DEFAULT_SCENE_FRAMES = 8;
+
+/** Default delay for animate_scene */
+export const DEFAULT_SCENE_DELAY = 150;
