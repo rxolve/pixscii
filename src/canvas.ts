@@ -51,6 +51,90 @@ export function listCanvases(): string[] {
   return [...canvasStore.keys()];
 }
 
+/** Metadata for a canvas in the store */
+export interface CanvasMeta {
+  id: string;
+  width: number;
+  height: number;
+  palette: string;
+  nonTransparent: number;
+  hasUndo: boolean;
+}
+
+export function listCanvasesWithMeta(): CanvasMeta[] {
+  const out: CanvasMeta[] = [];
+  for (const [id, c] of canvasStore) {
+    out.push({
+      id,
+      width: c.width,
+      height: c.height,
+      palette: c.palette,
+      nonTransparent: countNonTransparent(c.data),
+      hasUndo: c.prev !== null,
+    });
+  }
+  return out;
+}
+
+/** Clone a canvas into a fresh entry. The new canvas has no undo history. */
+export function cloneCanvas(sourceId: string): string {
+  const src = requireCanvas(sourceId);
+  const copiedPixels = src.data.pixels.map((row) => [...row]);
+  return storeCanvas({
+    data: { width: src.data.width, height: src.data.height, pixels: copiedPixels },
+    width: src.width,
+    height: src.height,
+    palette: src.palette,
+    prev: null,
+  });
+}
+
+/** Summary of a diff between two canvases */
+export interface DiffSummary {
+  width: number;
+  height: number;
+  changed: number;
+  grid: string;
+}
+
+/**
+ * Diff two canvases pixel-by-pixel. Dimensions must match.
+ * Returns a hex grid where '=' marks unchanged pixels and the
+ * new color hex char (or '.') marks pixels that differ in b.
+ */
+export function diffCanvases(aId: string, bId: string): DiffSummary {
+  const a = requireCanvas(aId);
+  const b = requireCanvas(bId);
+  if (a.width !== b.width || a.height !== b.height) {
+    throw new Error(
+      `Canvas size mismatch: ${aId} is ${a.width}x${a.height}, ${bId} is ${b.width}x${b.height}`,
+    );
+  }
+
+  const lines: string[] = [];
+  const colHeader = '     ' + Array.from({ length: a.width }, (_, i) => hexDigit(i % 16)).join('');
+  lines.push(colHeader);
+
+  let changed = 0;
+  for (let y = 0; y < a.height; y++) {
+    const rowLabel = hexDigit(y % 16).padStart(2, ' ');
+    let rowChars = '';
+    for (let x = 0; x < a.width; x++) {
+      const pa = a.data.pixels[y]?.[x] ?? -1;
+      const pb = b.data.pixels[y]?.[x] ?? -1;
+      if (pa === pb) {
+        rowChars += '=';
+      } else {
+        rowChars += formatColor(pb);
+        changed++;
+      }
+    }
+    lines.push(`${rowLabel}: ${rowChars}`);
+  }
+
+  return { width: a.width, height: a.height, changed, grid: lines.join('\n') };
+}
+
 /** Reset store — for testing only */
 export function _resetStore(): void {
   canvasStore.clear();

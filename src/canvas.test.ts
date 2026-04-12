@@ -9,6 +9,9 @@ import {
   parseColor,
   formatColor,
   inspectCanvas,
+  listCanvasesWithMeta,
+  cloneCanvas,
+  diffCanvases,
   _resetStore,
 } from './canvas.js';
 import type { Canvas, SpriteData } from './types.js';
@@ -172,5 +175,102 @@ describe('inspectCanvas', () => {
     const text = inspectCanvas(id, c, { x: 0, y: 0, w: 8, h: 8 });
     expect(text).toContain('region:');
     expect(text).toContain('...5'); // row 2 has a 5 at col 3
+  });
+});
+
+describe('listCanvasesWithMeta', () => {
+  it('returns empty array when no canvases', () => {
+    expect(listCanvasesWithMeta()).toEqual([]);
+  });
+
+  it('reports dimensions, palette, pixel count, and undo state', () => {
+    const c = makeCanvas(4, 4);
+    c.data.pixels[0][0] = 1;
+    c.data.pixels[1][1] = 2;
+    const id = storeCanvas(c);
+
+    const metas = listCanvasesWithMeta();
+    expect(metas).toHaveLength(1);
+    expect(metas[0]).toMatchObject({
+      id,
+      width: 4,
+      height: 4,
+      palette: 'pico8',
+      nonTransparent: 2,
+      hasUndo: false,
+    });
+  });
+
+  it('marks hasUndo true after an update', () => {
+    const c = makeCanvas(2, 2);
+    const id = storeCanvas(c);
+    updateCanvas(id, { width: 2, height: 2, pixels: [[1, 1], [1, 1]] });
+    expect(listCanvasesWithMeta()[0].hasUndo).toBe(true);
+  });
+});
+
+describe('cloneCanvas', () => {
+  it('creates a fresh canvas with independent pixel data', () => {
+    const c = makeCanvas(3, 3);
+    c.data.pixels[0][0] = 5;
+    const srcId = storeCanvas(c);
+    const cloneId = cloneCanvas(srcId);
+
+    expect(cloneId).not.toBe(srcId);
+    const clone = requireCanvas(cloneId);
+    expect(clone.data.pixels[0][0]).toBe(5);
+
+    // Mutating the clone must not affect the source.
+    clone.data.pixels[0][0] = 8;
+    expect(requireCanvas(srcId).data.pixels[0][0]).toBe(5);
+  });
+
+  it('clone starts with no undo history', () => {
+    const c = makeCanvas(2, 2);
+    const srcId = storeCanvas(c);
+    updateCanvas(srcId, { width: 2, height: 2, pixels: [[1, 1], [1, 1]] });
+    expect(requireCanvas(srcId).prev).not.toBeNull();
+
+    const cloneId = cloneCanvas(srcId);
+    expect(requireCanvas(cloneId).prev).toBeNull();
+  });
+
+  it('throws for unknown source ID', () => {
+    expect(() => cloneCanvas('bad-id')).toThrow('not found');
+  });
+});
+
+describe('diffCanvases', () => {
+  it('reports zero changes for identical canvases', () => {
+    const a = makeCanvas(3, 3);
+    const b = makeCanvas(3, 3);
+    const aId = storeCanvas(a);
+    const bId = storeCanvas(b);
+
+    const summary = diffCanvases(aId, bId);
+    expect(summary.changed).toBe(0);
+    expect(summary.grid).toContain('===');
+  });
+
+  it('marks differences with the new color character', () => {
+    const a = makeCanvas(2, 2);
+    const b = makeCanvas(2, 2);
+    b.data.pixels[0][0] = 8;
+    b.data.pixels[1][1] = 10;
+    const aId = storeCanvas(a);
+    const bId = storeCanvas(b);
+
+    const summary = diffCanvases(aId, bId);
+    expect(summary.changed).toBe(2);
+    // Row 0 starts with '8' (new color at 0,0), '=' at 0,1
+    expect(summary.grid).toContain('8=');
+    // Row 1 has '=' then 'A' (10 hex)
+    expect(summary.grid).toContain('=A');
+  });
+
+  it('throws on dimension mismatch', () => {
+    const aId = storeCanvas(makeCanvas(4, 4));
+    const bId = storeCanvas(makeCanvas(8, 8));
+    expect(() => diffCanvases(aId, bId)).toThrow('size mismatch');
   });
 });

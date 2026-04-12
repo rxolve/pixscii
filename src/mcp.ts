@@ -14,7 +14,7 @@ import { createAnimation, MOTION_TYPES } from './animate.js';
 import { resolveImageInput } from './resolve.js';
 import { quantizeToSprite } from './convert.js';
 import { createEmpty, mergeHorizontal, mergeVertical, mergeGrid } from './sprite.js';
-import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas } from './canvas.js';
+import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas, listCanvasesWithMeta, cloneCanvas, diffCanvases } from './canvas.js';
 import { setPixels, drawLine, drawRect, floodFill, mirrorH } from './draw.js';
 import { composeAllFrames } from './scene.js';
 import type { ActorDef, SceneDef } from './scene.js';
@@ -554,6 +554,71 @@ server.tool(
       setCanvasDirectly(canvas_id, { ...canvas, data: canvas.prev, prev: null });
       const grid = inspectCanvas(canvas_id, requireCanvas(canvas_id));
       return { content: [{ type: 'text' as const, text: `Undone.\n\n${grid}` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- list tool ---
+server.tool(
+  'list',
+  'List all live canvases in the current session with their dimensions, palette, pixel count, and undo state.',
+  {},
+  async () => {
+    try {
+      const metas = listCanvasesWithMeta();
+      if (metas.length === 0) {
+        return { content: [{ type: 'text' as const, text: 'No canvases in session.' }] };
+      }
+      const lines = metas.map(
+        (m) =>
+          `- ${m.id} | ${m.width}x${m.height} | palette: ${m.palette} | pixels: ${m.nonTransparent}/${m.width * m.height} | undo: ${m.hasUndo ? 'yes' : 'no'}`,
+      );
+      const text = `Live canvases (${metas.length}):\n${lines.join('\n')}`;
+      return { content: [{ type: 'text' as const, text }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- clone tool ---
+server.tool(
+  'clone',
+  'Duplicate a canvas into a fresh canvas ID so you can branch edits safely. The clone starts with no undo history.',
+  {
+    canvas_id: z.string().describe('Canvas ID to clone'),
+  },
+  async ({ canvas_id }) => {
+    try {
+      const newId = cloneCanvas(canvas_id);
+      const grid = inspectCanvas(newId, requireCanvas(newId));
+      return {
+        content: [{ type: 'text' as const, text: `Cloned ${canvas_id} -> ${newId}\n\n${grid}` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- diff tool ---
+server.tool(
+  'diff',
+  'Compare two canvases pixel-by-pixel. Returns a hex grid where "=" marks unchanged pixels and the new color char marks differences. Dimensions must match.',
+  {
+    a: z.string().describe('Canvas ID for the "before" state'),
+    b: z.string().describe('Canvas ID for the "after" state'),
+  },
+  async ({ a, b }) => {
+    try {
+      const summary = diffCanvases(a, b);
+      const total = summary.width * summary.height;
+      const header = `diff: ${a} -> ${b}\nsize: ${summary.width}x${summary.height} | changed: ${summary.changed}/${total}`;
+      return {
+        content: [{ type: 'text' as const, text: `${header}\n\n${summary.grid}` }],
+      };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
     }
