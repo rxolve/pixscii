@@ -16,6 +16,7 @@ import {
   restoreSnapshot,
   listSnapshots,
   setCanvasPalette,
+  resizeCanvas,
   _resetStore,
 } from './canvas.js';
 import { MAX_SNAPSHOTS_PER_CANVAS } from './constants.js';
@@ -369,6 +370,28 @@ describe('snapshotCanvas / restoreSnapshot', () => {
     snapshotCanvas(id, 'b');
     const meta = listCanvasesWithMeta().find((m) => m.id === id)!;
     expect(meta.snapshotCount).toBe(2);
+  });
+});
+
+describe('resizeCanvas', () => {
+  it('syncs width/height on the Canvas wrapper and records prev', () => {
+    const c = makeCanvas(2, 2);
+    c.data.pixels[0][0] = 1;
+    const id = storeCanvas(c);
+
+    const bigger: SpriteData = {
+      width: 4,
+      height: 4,
+      pixels: Array.from({ length: 4 }, () => new Array(4).fill(-1)),
+    };
+    bigger.pixels[0][0] = 1;
+    resizeCanvas(id, bigger);
+
+    const after = requireCanvas(id);
+    expect(after.width).toBe(4);
+    expect(after.height).toBe(4);
+    expect(after.data).toBe(bigger);
+    expect(after.prev).toBe(c.data);
   });
 });
 

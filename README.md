@@ -33,7 +33,7 @@ Or add to your MCP client config:
 }
 ```
 
-## Syscalls (24)
+## Syscalls (27)
 
 ### Source — allocate a canvas
 
@@ -54,6 +54,8 @@ Or add to your MCP client config:
 | `rect` | Rectangle — outline or filled |
 | `fill` | Flood fill from a point (with leak detection) |
 | `mirror` | Mirror left half to right half |
+| `shift` | Shift all pixels by (dx, dy); optional wraparound |
+| `resize` | Crop or extend the canvas to new dimensions (in-place, with offset) |
 | `undo` | Revert the last drawing operation |
 | `copy` | Blit a rectangular region from one canvas onto another (supports self-copy with overlap) |
 | `repalette` | Switch a canvas's palette mode without touching pixel indices |
@@ -65,6 +67,7 @@ Or add to your MCP client config:
 | `inspect` | View the canvas as a hex character grid |
 | `list` | List every live canvas in the session (dimensions, palette, pixel count, undo state) |
 | `diff` | Pixel-level diff between two canvases — unchanged pixels as `=`, changes as the new color |
+| `palettes` | List all loaded palette IDs and color counts (discovery for `repalette`) |
 
 ### Process control — branch, checkpoint, reuse
 
@@ -229,6 +232,37 @@ The session holds at most 40 live canvases. Beyond that, the oldest is evicted F
 ```
 
 Kills the canvas and all its snapshots. Reclaims one slot.
+
+## Scroll and reframe: `shift` and `resize`
+
+`shift` slides every pixel by `(dx, dy)`. Vacated pixels become transparent by default, or wrap around to the opposite edge if `wrap: true` — useful for scrolling backgrounds.
+
+```
+→ shift { canvas_id: "...", dx: 1, dy: 0 }         ← slide right one column
+→ shift { canvas_id: "...", dx: -1, dy: 0, wrap: true }   ← scroll a torus
+```
+
+`resize` crops or extends the canvas to new dimensions in place. The existing pixels land at `(offset_x, offset_y)` in the new frame; everything outside the new bounds is cropped, and any new area is transparent.
+
+```
+→ resize { canvas_id: "...", width: 32, height: 32, offset_x: 8, offset_y: 8 }
+```
+
+Grows a 16×16 into a 32×32 with the old content centered. Combined with `copy`, this is how you pull a tight sprite into a scene-sized canvas without starting over.
+
+Both `shift` and `resize` participate in single-step undo, so one bad reframe is always recoverable.
+
+## Discovering palettes
+
+`palettes` is `ls /dev/palettes` — the agent asks what's installed before calling `repalette`:
+
+```
+→ palettes {}
+← Palettes (3):
+  - pico8 (PICO-8) | 16 colors
+  - grayscale (Grayscale) | 16 colors
+  - gameboy (Game Boy) | 4 colors
+```
 
 ## Example: Drawing a Health Potion from Scratch
 

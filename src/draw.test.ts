@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { setPixels, drawLine, drawRect, floodFill, mirrorH, copyRegion } from './draw.js';
+import { setPixels, drawLine, drawRect, floodFill, mirrorH, copyRegion, shiftSprite, resizeSprite } from './draw.js';
 import { createEmpty } from './sprite.js';
 import type { SpriteData } from './types.js';
 
@@ -290,5 +290,96 @@ describe('copyRegion', () => {
     s.pixels[0] = [1, 2, 3, 4];
     const r = copyRegion(s, s, { sx: 0, sy: 0, w: 3, h: 1, dx: 1, dy: 0 });
     expect(r.pixels[0]).toEqual([1, 1, 2, 3]);
+  });
+});
+
+describe('shiftSprite', () => {
+  it('shifts right, leaving new left column transparent', () => {
+    const s = makeSprite(4, 1);
+    s.pixels[0] = [1, 2, 3, 4];
+    const r = shiftSprite(s, 1, 0, false);
+    expect(r.pixels[0]).toEqual([-1, 1, 2, 3]);
+  });
+
+  it('shifts down, clearing top row', () => {
+    const s = makeSprite(1, 3);
+    s.pixels = [[1], [2], [3]];
+    const r = shiftSprite(s, 0, 1, false);
+    expect(r.pixels.map((row) => row[0])).toEqual([-1, 1, 2]);
+  });
+
+  it('wraps around with wrap=true (horizontal)', () => {
+    const s = makeSprite(4, 1);
+    s.pixels[0] = [1, 2, 3, 4];
+    const r = shiftSprite(s, 1, 0, true);
+    expect(r.pixels[0]).toEqual([4, 1, 2, 3]);
+  });
+
+  it('wraps with negative shift', () => {
+    const s = makeSprite(4, 1);
+    s.pixels[0] = [1, 2, 3, 4];
+    const r = shiftSprite(s, -1, 0, true);
+    expect(r.pixels[0]).toEqual([2, 3, 4, 1]);
+  });
+
+  it('no-op for (0,0) shift', () => {
+    const s = makeSprite(3, 3);
+    s.pixels[1][1] = 5;
+    const r = shiftSprite(s, 0, 0, false);
+    expect(r.pixels[1][1]).toBe(5);
+  });
+
+  it('shifting beyond canvas clears entire non-wrap result', () => {
+    const s = makeSprite(3, 3);
+    s.pixels[1][1] = 5;
+    const r = shiftSprite(s, 10, 0, false);
+    for (const row of r.pixels) for (const px of row) expect(px).toBe(-1);
+  });
+});
+
+describe('resizeSprite', () => {
+  it('extends with transparent padding when growing', () => {
+    const s = makeSprite(2, 2);
+    s.pixels = [[1, 2], [3, 4]];
+    const r = resizeSprite(s, 4, 4, 0, 0);
+    expect(r.width).toBe(4);
+    expect(r.height).toBe(4);
+    expect(r.pixels[0][0]).toBe(1);
+    expect(r.pixels[1][1]).toBe(4);
+    // New area is transparent.
+    expect(r.pixels[2][2]).toBe(-1);
+    expect(r.pixels[3][3]).toBe(-1);
+  });
+
+  it('crops when shrinking', () => {
+    const s = makeSprite(4, 4);
+    s.pixels = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]];
+    const r = resizeSprite(s, 2, 2, 0, 0);
+    expect(r.pixels).toEqual([[1, 2], [5, 6]]);
+  });
+
+  it('centers old content with positive offset', () => {
+    const s = makeSprite(2, 2);
+    s.pixels = [[1, 2], [3, 4]];
+    const r = resizeSprite(s, 4, 4, 1, 1);
+    expect(r.pixels[0][0]).toBe(-1);
+    expect(r.pixels[1][1]).toBe(1);
+    expect(r.pixels[2][2]).toBe(4);
+    expect(r.pixels[3][3]).toBe(-1);
+  });
+
+  it('negative offset crops from top-left', () => {
+    const s = makeSprite(4, 4);
+    s.pixels = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]];
+    const r = resizeSprite(s, 2, 2, -1, -1);
+    // New (0,0) reads from old (1,1), etc.
+    expect(r.pixels).toEqual([[6, 7], [10, 11]]);
+  });
+
+  it('does not mutate the source', () => {
+    const s = makeSprite(2, 2);
+    s.pixels = [[1, 2], [3, 4]];
+    resizeSprite(s, 4, 4, 0, 0);
+    expect(s.pixels).toEqual([[1, 2], [3, 4]]);
   });
 });

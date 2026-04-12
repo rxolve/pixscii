@@ -136,13 +136,34 @@ export function restoreSnapshot(id: string, name: string): void {
     height: snap.height,
     pixels: snap.pixels.map((row) => [...row]),
   };
-  canvasStore.set(id, { ...c, data, prev: c.data });
+  canvasStore.set(id, {
+    ...c,
+    data,
+    width: data.width,
+    height: data.height,
+    prev: c.data,
+  });
 }
 
 /** List snapshot names on a canvas. */
 export function listSnapshots(id: string): string[] {
   const c = requireCanvas(id);
   return c.snapshots ? [...c.snapshots.keys()] : [];
+}
+
+/**
+ * Replace a canvas's data and sync width/height from the new pixel grid.
+ * The old data becomes prev (so undo rolls back the resize).
+ */
+export function resizeCanvas(id: string, newData: SpriteData): void {
+  const c = requireCanvas(id);
+  canvasStore.set(id, {
+    ...c,
+    data: newData,
+    width: newData.width,
+    height: newData.height,
+    prev: c.data,
+  });
 }
 
 /**

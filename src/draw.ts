@@ -199,6 +199,69 @@ export function copyRegion(
   return { width: dst.width, height: dst.height, pixels };
 }
 
+/**
+ * Shift all pixels by (dx, dy). If wrap is true, pixels that move off an edge
+ * reappear on the opposite edge (torus). Otherwise vacated pixels are transparent.
+ */
+export function shiftSprite(
+  sprite: SpriteData,
+  dx: number,
+  dy: number,
+  wrap: boolean,
+): SpriteData {
+  const { width, height } = sprite;
+  const pixels: number[][] = [];
+  for (let y = 0; y < height; y++) {
+    const row: number[] = [];
+    for (let x = 0; x < width; x++) {
+      let sx = x - dx;
+      let sy = y - dy;
+      if (wrap) {
+        sx = ((sx % width) + width) % width;
+        sy = ((sy % height) + height) % height;
+        row.push(sprite.pixels[sy][sx]);
+      } else {
+        if (sx < 0 || sx >= width || sy < 0 || sy >= height) {
+          row.push(-1);
+        } else {
+          row.push(sprite.pixels[sy][sx]);
+        }
+      }
+    }
+    pixels.push(row);
+  }
+  return { width, height, pixels };
+}
+
+/**
+ * Resize a sprite to new dimensions. The existing pixels are placed at
+ * (offsetX, offsetY) in the new canvas. Pixels outside the new bounds are
+ * dropped (crop); vacant pixels in the new canvas are transparent (pad).
+ */
+export function resizeSprite(
+  sprite: SpriteData,
+  newWidth: number,
+  newHeight: number,
+  offsetX: number,
+  offsetY: number,
+): SpriteData {
+  const pixels: number[][] = [];
+  for (let y = 0; y < newHeight; y++) {
+    const row: number[] = [];
+    const srcY = y - offsetY;
+    for (let x = 0; x < newWidth; x++) {
+      const srcX = x - offsetX;
+      if (srcX < 0 || srcX >= sprite.width || srcY < 0 || srcY >= sprite.height) {
+        row.push(-1);
+      } else {
+        row.push(sprite.pixels[srcY][srcX]);
+      }
+    }
+    pixels.push(row);
+  }
+  return { width: newWidth, height: newHeight, pixels };
+}
+
 /** Mirror sprite horizontally (left half → right half) */
 export function mirrorH(sprite: SpriteData, axisX?: number): SpriteData {
   const { width, height } = sprite;

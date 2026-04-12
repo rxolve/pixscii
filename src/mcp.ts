@@ -14,9 +14,9 @@ import { createAnimation, MOTION_TYPES } from './animate.js';
 import { resolveImageInput } from './resolve.js';
 import { quantizeToSprite } from './convert.js';
 import { createEmpty, mergeHorizontal, mergeVertical, mergeGrid } from './sprite.js';
-import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas, listCanvasesWithMeta, cloneCanvas, diffCanvases, snapshotCanvas, restoreSnapshot, listSnapshots, setCanvasPalette, deleteCanvas, listCanvases } from './canvas.js';
+import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas, listCanvasesWithMeta, cloneCanvas, diffCanvases, snapshotCanvas, restoreSnapshot, listSnapshots, setCanvasPalette, deleteCanvas, listCanvases, resizeCanvas } from './canvas.js';
 import { listPalettes } from './palette.js';
-import { setPixels, drawLine, drawRect, floodFill, mirrorH, copyRegion } from './draw.js';
+import { setPixels, drawLine, drawRect, floodFill, mirrorH, copyRegion, shiftSprite, resizeSprite } from './draw.js';
 import { composeAllFrames } from './scene.js';
 import type { ActorDef, SceneDef } from './scene.js';
 import type { SpriteData, MotionType } from './types.js';
@@ -552,7 +552,13 @@ server.tool(
           isError: true,
         };
       }
-      setCanvasDirectly(canvas_id, { ...canvas, data: canvas.prev, prev: null });
+      setCanvasDirectly(canvas_id, {
+        ...canvas,
+        data: canvas.prev,
+        width: canvas.prev.width,
+        height: canvas.prev.height,
+        prev: null,
+      });
       const grid = inspectCanvas(canvas_id, requireCanvas(canvas_id));
       return { content: [{ type: 'text' as const, text: `Undone.\n\n${grid}` }] };
     } catch (err) {
@@ -619,6 +625,89 @@ server.tool(
       const header = `diff: ${a} -> ${b}\nsize: ${summary.width}x${summary.height} | changed: ${summary.changed}/${total}`;
       return {
         content: [{ type: 'text' as const, text: `${header}\n\n${summary.grid}` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- shift tool ---
+server.tool(
+  'shift',
+  'Shift all pixels on a canvas by (dx, dy). By default, pixels shifted off the edge are lost and new edges become transparent. With wrap=true, the canvas behaves as a torus — pixels wrap around.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    dx: z.number().int().describe('Horizontal shift (positive = right)'),
+    dy: z.number().int().describe('Vertical shift (positive = down)'),
+    wrap: z.boolean().optional().describe('Wrap pixels around edges (default false)'),
+  },
+  async ({ canvas_id, dx, dy, wrap }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const newData = shiftSprite(canvas.data, dx, dy, wrap ?? false);
+      updateCanvas(canvas_id, newData);
+      const grid = inspectCanvas(canvas_id, requireCanvas(canvas_id));
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Shifted ${canvas_id} by (${dx},${dy})${wrap ? ' with wrap' : ''}.\n\n${grid}`,
+        }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- resize tool ---
+server.tool(
+  'resize',
+  'Resize a canvas to new dimensions. Existing pixels are placed at (offset_x, offset_y) in the new canvas; vacant areas are transparent, pixels outside the new bounds are cropped. Use offset to crop from any edge or to center the old content in a larger canvas.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    width: z.number().int().min(1).max(MAX_CANVAS_WIDTH).describe('New width in pixels'),
+    height: z.number().int().min(1).max(MAX_CANVAS_HEIGHT).describe('New height in pixels'),
+    offset_x: z.number().int().optional().describe('Where the old (0,0) lands in the new canvas (default 0)'),
+    offset_y: z.number().int().optional().describe('Where the old (0,0) lands in the new canvas (default 0)'),
+  },
+  async ({ canvas_id, width, height, offset_x, offset_y }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const ox = offset_x ?? 0;
+      const oy = offset_y ?? 0;
+      const newData = resizeSprite(canvas.data, width, height, ox, oy);
+      resizeCanvas(canvas_id, newData);
+      const grid = inspectCanvas(canvas_id, requireCanvas(canvas_id));
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Resized ${canvas_id}: ${canvas.width}x${canvas.height} -> ${width}x${height} (offset ${ox},${oy}).\n\n${grid}`,
+        }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- palettes tool ---
+server.tool(
+  'palettes',
+  'List all loaded palettes with their IDs, names, and color counts. Pairs with repalette and with the "palette" parameter on other tools.',
+  {},
+  async () => {
+    try {
+      const ids = listPalettes();
+      if (ids.length === 0) {
+        return { content: [{ type: 'text' as const, text: 'No palettes loaded.' }] };
+      }
+      const lines = ids.map((id) => {
+        const p = getPalette(id);
+        return `- ${p.id} (${p.name}) | ${p.colors.length} colors`;
+      });
+      return {
+        content: [{ type: 'text' as const, text: `Palettes (${ids.length}):\n${lines.join('\n')}` }],
       };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
