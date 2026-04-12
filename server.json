@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.rxolve/pixscii",
-  "description": "LLMs can't draw. This MCP can. Pixel art creation toolkit — draw, inspect, compose, export.",
+  "description": "LLMs can't draw. This MCP can. Pixel art animation toolkit — draw, animate, compose, export.",
   "repository": {
     "url": "https://github.com/rxolve/pixscii",
     "source": "github"

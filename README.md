@@ -24,7 +24,7 @@ animate_scene {
 
 One tool call. 3 characters, tiled background, 24 frames. 9ms.
 
-The LLM translates "an RPG party walks toward a dungeon" into structured input. pixscii executes it instantly.
+The LLM translates a scene description into structured input. pixscii executes it instantly.
 
 ## Quick Start
 
@@ -59,7 +59,7 @@ Or add to your MCP client config:
 |------|-------------|
 | `create` | New blank canvas with optional fill color |
 | `get` | Load a bundled sprite into an editable canvas |
-| `character` | Generate a procedural RPG character |
+| `character` | Generate a procedural pixel character |
 | `convert` | Quantize any image (URL or base64) to pixel art |
 | `search` | Browse the sprite library |
 

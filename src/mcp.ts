@@ -148,7 +148,7 @@ server.tool(
 // --- character tool ---
 server.tool(
   'character',
-  'Generate a procedural RPG character sprite. Same seed always produces the same character. 648 unique combinations.',
+  'Generate a procedural pixel character sprite. Same seed always produces the same character. 648 unique combinations.',
   {
     seed: z.string().max(MAX_SEED_LENGTH).describe('Seed string for deterministic generation. Same seed = same character.'),
     species: z.enum(SPECIES).optional().describe(`Species: ${SPECIES.join(', ')}`),
