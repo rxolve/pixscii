@@ -32,7 +32,7 @@ if (subcommand === 'import' || subcommand === 'export') {
 
 const server = new McpServer({
   name: 'pixscii',
-  version: '0.3.0',
+  version: '0.3.1',
 });
 
 // --- search tool ---

@@ -62,12 +62,12 @@ describe('generateCharacter', () => {
     expect(desc).toContain('dwarf');
   });
 
-  it('returns 16x16 sprite', () => {
+  it('returns 32x32 sprite', () => {
     const sprite = generateCharacter({ seed: 'size-test' });
-    expect(sprite.width).toBe(16);
-    expect(sprite.height).toBe(16);
-    expect(sprite.pixels.length).toBe(16);
-    expect(sprite.pixels[0].length).toBe(16);
+    expect(sprite.width).toBe(32);
+    expect(sprite.height).toBe(32);
+    expect(sprite.pixels.length).toBe(32);
+    expect(sprite.pixels[0].length).toBe(32);
   });
 });
 

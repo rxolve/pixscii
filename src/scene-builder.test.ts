@@ -127,7 +127,7 @@ describe('buildScene', () => {
       actors: [{ seed: 'test', from: { x: 0, y: 0 }, to: { x: 0, y: 0 } }],
     });
     expect(scene.background).not.toBeNull();
-    expect(scene.background!.width).toBe(32);
-    expect(scene.background!.height).toBe(16);
+    expect(scene.background!.width).toBe(64);
+    expect(scene.background!.height).toBe(32);
   });
 });

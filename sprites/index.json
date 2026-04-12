@@ -1,27 +1,311 @@
 [
-  { "id": "sword", "name": "Sword", "category": "items", "tags": ["weapon", "melee", "blade", "steel"], "file": "items/sword.json", "width": 16, "height": 16 },
-  { "id": "shield", "name": "Shield", "category": "items", "tags": ["armor", "defense", "protection"], "file": "items/shield.json", "width": 16, "height": 16 },
-  { "id": "potion", "name": "Potion", "category": "items", "tags": ["heal", "health", "drink", "bottle", "red"], "file": "items/potion.json", "width": 16, "height": 16 },
-  { "id": "key", "name": "Key", "category": "items", "tags": ["unlock", "door", "gold", "treasure"], "file": "items/key.json", "width": 16, "height": 16 },
-  { "id": "bow", "name": "Bow", "category": "items", "tags": ["weapon", "ranged", "arrow", "wood"], "file": "items/bow.json", "width": 16, "height": 16 },
-  { "id": "coin", "name": "Coin", "category": "items", "tags": ["gold", "money", "treasure", "currency"], "file": "items/coin.json", "width": 16, "height": 16 },
-
-  { "id": "grass", "name": "Grass", "category": "tiles", "tags": ["ground", "nature", "green", "field"], "file": "tiles/grass.json", "width": 16, "height": 16 },
-  { "id": "stone", "name": "Stone", "category": "tiles", "tags": ["floor", "dungeon", "grey", "cobble"], "file": "tiles/stone.json", "width": 16, "height": 16 },
-  { "id": "water", "name": "Water", "category": "tiles", "tags": ["liquid", "ocean", "river", "blue", "lake"], "file": "tiles/water.json", "width": 16, "height": 16 },
-  { "id": "wall", "name": "Wall", "category": "tiles", "tags": ["brick", "barrier", "dungeon", "building"], "file": "tiles/wall.json", "width": 16, "height": 16 },
-  { "id": "door", "name": "Door", "category": "tiles", "tags": ["entrance", "exit", "wood", "building"], "file": "tiles/door.json", "width": 16, "height": 16 },
-  { "id": "tree", "name": "Tree", "category": "tiles", "tags": ["nature", "forest", "wood", "green"], "file": "tiles/tree.json", "width": 16, "height": 16 },
-  { "id": "sand", "name": "Sand", "category": "tiles", "tags": ["desert", "beach", "ground", "yellow"], "file": "tiles/sand.json", "width": 16, "height": 16 },
-  { "id": "dirt", "name": "Dirt", "category": "tiles", "tags": ["ground", "earth", "brown", "path"], "file": "tiles/dirt.json", "width": 16, "height": 16 },
-
-  { "id": "slash", "name": "Slash", "category": "effects", "tags": ["attack", "sword", "cut", "melee"], "file": "effects/slash.json", "width": 16, "height": 16 },
-  { "id": "sparkle", "name": "Sparkle", "category": "effects", "tags": ["magic", "shine", "star", "glitter"], "file": "effects/sparkle.json", "width": 16, "height": 16 },
-  { "id": "explosion", "name": "Explosion", "category": "effects", "tags": ["fire", "boom", "blast", "damage"], "file": "effects/explosion.json", "width": 16, "height": 16 },
-  { "id": "heal", "name": "Heal", "category": "effects", "tags": ["magic", "restore", "health", "green"], "file": "effects/heal.json", "width": 16, "height": 16 },
-
-  { "id": "heart-full", "name": "Heart Full", "category": "ui", "tags": ["health", "life", "hp", "red"], "file": "ui/heart-full.json", "width": 16, "height": 16 },
-  { "id": "heart-empty", "name": "Heart Empty", "category": "ui", "tags": ["health", "life", "hp", "empty"], "file": "ui/heart-empty.json", "width": 16, "height": 16 },
-  { "id": "arrow-up", "name": "Arrow Up", "category": "ui", "tags": ["direction", "up", "pointer", "indicator"], "file": "ui/arrow-up.json", "width": 16, "height": 16 },
-  { "id": "cursor", "name": "Cursor", "category": "ui", "tags": ["pointer", "select", "mouse", "click"], "file": "ui/cursor.json", "width": 16, "height": 16 }
+  {
+    "id": "sword",
+    "name": "Sword",
+    "category": "items",
+    "tags": [
+      "weapon",
+      "melee",
+      "blade",
+      "steel"
+    ],
+    "file": "items/sword.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "shield",
+    "name": "Shield",
+    "category": "items",
+    "tags": [
+      "armor",
+      "defense",
+      "protection"
+    ],
+    "file": "items/shield.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "potion",
+    "name": "Potion",
+    "category": "items",
+    "tags": [
+      "heal",
+      "health",
+      "drink",
+      "bottle",
+      "red"
+    ],
+    "file": "items/potion.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "key",
+    "name": "Key",
+    "category": "items",
+    "tags": [
+      "unlock",
+      "door",
+      "gold",
+      "treasure"
+    ],
+    "file": "items/key.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "bow",
+    "name": "Bow",
+    "category": "items",
+    "tags": [
+      "weapon",
+      "ranged",
+      "arrow",
+      "wood"
+    ],
+    "file": "items/bow.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "coin",
+    "name": "Coin",
+    "category": "items",
+    "tags": [
+      "gold",
+      "money",
+      "treasure",
+      "currency"
+    ],
+    "file": "items/coin.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "grass",
+    "name": "Grass",
+    "category": "tiles",
+    "tags": [
+      "ground",
+      "nature",
+      "green",
+      "field"
+    ],
+    "file": "tiles/grass.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "stone",
+    "name": "Stone",
+    "category": "tiles",
+    "tags": [
+      "floor",
+      "dungeon",
+      "grey",
+      "cobble"
+    ],
+    "file": "tiles/stone.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "water",
+    "name": "Water",
+    "category": "tiles",
+    "tags": [
+      "liquid",
+      "ocean",
+      "river",
+      "blue",
+      "lake"
+    ],
+    "file": "tiles/water.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "wall",
+    "name": "Wall",
+    "category": "tiles",
+    "tags": [
+      "brick",
+      "barrier",
+      "dungeon",
+      "building"
+    ],
+    "file": "tiles/wall.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "door",
+    "name": "Door",
+    "category": "tiles",
+    "tags": [
+      "entrance",
+      "exit",
+      "wood",
+      "building"
+    ],
+    "file": "tiles/door.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "tree",
+    "name": "Tree",
+    "category": "tiles",
+    "tags": [
+      "nature",
+      "forest",
+      "wood",
+      "green"
+    ],
+    "file": "tiles/tree.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "sand",
+    "name": "Sand",
+    "category": "tiles",
+    "tags": [
+      "desert",
+      "beach",
+      "ground",
+      "yellow"
+    ],
+    "file": "tiles/sand.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "dirt",
+    "name": "Dirt",
+    "category": "tiles",
+    "tags": [
+      "ground",
+      "earth",
+      "brown",
+      "path"
+    ],
+    "file": "tiles/dirt.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "slash",
+    "name": "Slash",
+    "category": "effects",
+    "tags": [
+      "attack",
+      "sword",
+      "cut",
+      "melee"
+    ],
+    "file": "effects/slash.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "sparkle",
+    "name": "Sparkle",
+    "category": "effects",
+    "tags": [
+      "magic",
+      "shine",
+      "star",
+      "glitter"
+    ],
+    "file": "effects/sparkle.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "explosion",
+    "name": "Explosion",
+    "category": "effects",
+    "tags": [
+      "fire",
+      "boom",
+      "blast",
+      "damage"
+    ],
+    "file": "effects/explosion.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "heal",
+    "name": "Heal",
+    "category": "effects",
+    "tags": [
+      "magic",
+      "restore",
+      "health",
+      "green"
+    ],
+    "file": "effects/heal.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "heart-full",
+    "name": "Heart Full",
+    "category": "ui",
+    "tags": [
+      "health",
+      "life",
+      "hp",
+      "red"
+    ],
+    "file": "ui/heart-full.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "heart-empty",
+    "name": "Heart Empty",
+    "category": "ui",
+    "tags": [
+      "health",
+      "life",
+      "hp",
+      "empty"
+    ],
+    "file": "ui/heart-empty.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "arrow-up",
+    "name": "Arrow Up",
+    "category": "ui",
+    "tags": [
+      "direction",
+      "up",
+      "pointer",
+      "indicator"
+    ],
+    "file": "ui/arrow-up.json",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "id": "cursor",
+    "name": "Cursor",
+    "category": "ui",
+    "tags": [
+      "pointer",
+      "select",
+      "mouse",
+      "click"
+    ],
+    "file": "ui/cursor.json",
+    "width": 32,
+    "height": 32
+  }
 ]

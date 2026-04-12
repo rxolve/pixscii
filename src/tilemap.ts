@@ -12,9 +12,19 @@ export async function buildTilemap(grid: string[][]): Promise<SpriteData> {
   const rows = grid.length;
   const cols = grid[0].length;
 
-  // Assume all tiles are 16×16
-  const tileW = 16;
-  const tileH = 16;
+  // Detect tile size from first non-empty tile
+  let tileW = 16;
+  let tileH = 16;
+  outer: for (const row of grid) {
+    for (const id of row) {
+      if (!id || id === '' || id === 'empty') continue;
+      const cv = getCanvas(id);
+      if (cv) { tileW = cv.data.width; tileH = cv.data.height; break outer; }
+      const entry = getById(id);
+      if (entry) { tileW = entry.width; tileH = entry.height; break outer; }
+    }
+  }
+
   const width = cols * tileW;
   const height = rows * tileH;
 

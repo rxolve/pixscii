@@ -27,7 +27,7 @@ export const DEFAULT_PALETTE = 'pico8';
 export const MAX_SCALE = 16;
 
 /** Default scale factor */
-export const DEFAULT_SCALE = 8;
+export const DEFAULT_SCALE = 4;
 
 /** Maximum canvas dimensions for compose/tilemap */
 export const MAX_CANVAS_WIDTH = 256;

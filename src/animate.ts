@@ -25,10 +25,14 @@ function shiftSprite(sprite: SpriteData, dx: number, dy: number): SpriteData {
 /** Squeeze sprite vertically (squash effect) */
 function squashSprite(sprite: SpriteData): SpriteData {
   const pixels = sprite.pixels.map((row) => [...row]);
-  // Move bottom rows up by 1
+  const s = ms(sprite);
   if (sprite.height >= 4) {
-    pixels[sprite.height - 2] = pixels[sprite.height - 1];
-    pixels[sprite.height - 1] = new Array(sprite.width).fill(-1);
+    for (let i = 0; i < s; i++) {
+      const src = sprite.height - 1 - i;
+      const dst = sprite.height - 1 - s - i;
+      if (dst >= 0) pixels[dst] = [...pixels[src]];
+      pixels[src] = new Array(sprite.width).fill(-1);
+    }
   }
   return { width: sprite.width, height: sprite.height, pixels };
 }
@@ -39,14 +43,20 @@ function blinkSprite(sprite: SpriteData, visible: boolean): SpriteData {
   return createEmpty(sprite.width, sprite.height);
 }
 
-/** Idle: subtle breathing animation (shift up/down by 1px) */
+/** Scale factor for motion offsets — keeps animations proportional at any sprite size */
+function ms(sprite: SpriteData): number {
+  return Math.max(1, Math.round(sprite.width / 16));
+}
+
+/** Idle: subtle breathing animation */
 function motionIdle(sprite: SpriteData): Animation {
+  const s = ms(sprite);
   return {
     frames: [
       sprite,
       sprite,
-      shiftSprite(sprite, 0, -1),
-      shiftSprite(sprite, 0, -1),
+      shiftSprite(sprite, 0, -s),
+      shiftSprite(sprite, 0, -s),
       sprite,
       sprite,
     ],
@@ -57,12 +67,13 @@ function motionIdle(sprite: SpriteData): Animation {
 
 /** Walk: side-to-side bobbing */
 function motionWalk(sprite: SpriteData): Animation {
+  const s = ms(sprite);
   return {
     frames: [
       sprite,
-      shiftSprite(sprite, 1, -1),
+      shiftSprite(sprite, s, -s),
       sprite,
-      shiftSprite(sprite, -1, -1),
+      shiftSprite(sprite, -s, -s),
     ],
     delay: 150,
     loop: true,
@@ -71,14 +82,15 @@ function motionWalk(sprite: SpriteData): Animation {
 
 /** Attack: lunge forward then back */
 function motionAttack(sprite: SpriteData): Animation {
+  const s = ms(sprite);
   return {
     frames: [
       sprite,
-      shiftSprite(sprite, 1, 0),
-      shiftSprite(sprite, 2, 0),
-      shiftSprite(sprite, 3, 0),
-      shiftSprite(sprite, 2, 0),
-      shiftSprite(sprite, 1, 0),
+      shiftSprite(sprite, s, 0),
+      shiftSprite(sprite, 2 * s, 0),
+      shiftSprite(sprite, 3 * s, 0),
+      shiftSprite(sprite, 2 * s, 0),
+      shiftSprite(sprite, s, 0),
       sprite,
     ],
     delay: 80,
@@ -88,13 +100,14 @@ function motionAttack(sprite: SpriteData): Animation {
 
 /** Hurt: shake left-right rapidly */
 function motionHurt(sprite: SpriteData): Animation {
+  const s = ms(sprite);
   return {
     frames: [
       sprite,
-      shiftSprite(sprite, -2, 0),
-      shiftSprite(sprite, 2, 0),
-      shiftSprite(sprite, -1, 0),
-      shiftSprite(sprite, 1, 0),
+      shiftSprite(sprite, -2 * s, 0),
+      shiftSprite(sprite, 2 * s, 0),
+      shiftSprite(sprite, -s, 0),
+      shiftSprite(sprite, s, 0),
       sprite,
     ],
     delay: 60,
@@ -104,14 +117,15 @@ function motionHurt(sprite: SpriteData): Animation {
 
 /** Bounce: hop up and down */
 function motionBounce(sprite: SpriteData): Animation {
+  const s = ms(sprite);
   return {
     frames: [
       sprite,
-      shiftSprite(sprite, 0, -1),
-      shiftSprite(sprite, 0, -2),
-      shiftSprite(sprite, 0, -3),
-      shiftSprite(sprite, 0, -2),
-      shiftSprite(sprite, 0, -1),
+      shiftSprite(sprite, 0, -s),
+      shiftSprite(sprite, 0, -2 * s),
+      shiftSprite(sprite, 0, -3 * s),
+      shiftSprite(sprite, 0, -2 * s),
+      shiftSprite(sprite, 0, -s),
       squashSprite(sprite),
       sprite,
     ],
