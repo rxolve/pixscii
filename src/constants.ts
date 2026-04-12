@@ -63,3 +63,18 @@ export const HELMS = ['hood', 'iron', 'crown'] as const;
 
 /** Skin tone palette indices (mapped to PICO-8 colors) */
 export const SKIN_TONES = [15, 14, 9, 4, 5, 0] as const;
+
+/** Maximum number of simultaneously held canvases */
+export const MAX_CANVAS_COUNT = 20;
+
+/** Maximum pixels settable in a single pixel batch call */
+export const MAX_PIXELS_PER_BATCH = 512;
+
+/** Maximum flood fill area before aborting */
+export const MAX_FILL_AREA = 4096;
+
+/** Canvas ID prefix */
+export const CANVAS_ID_PREFIX = 'cvs';
+
+/** Threshold for switching from full inspect to region mode */
+export const INSPECT_FULL_THRESHOLD = 32;

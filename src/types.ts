@@ -86,3 +86,19 @@ export interface ComposeLayer {
   x: number;
   y: number;
 }
+
+/** In-memory editable canvas */
+export interface Canvas {
+  data: SpriteData;
+  width: number;
+  height: number;
+  palette: string;
+  prev: SpriteData | null;
+}
+
+/** Result of a flood fill operation */
+export interface FillResult {
+  result: SpriteData;
+  count: number;
+  leaked: boolean;
+}

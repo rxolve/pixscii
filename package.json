@@ -1,7 +1,7 @@
 {
   "name": "pixscii",
-  "version": "0.1.0",
-  "description": "Curated pixel art MCP server for AI agents — RPG sprites, characters, tilemaps",
+  "version": "0.2.0",
+  "description": "Pixel art creation MCP server for AI agents — draw, inspect, compose, and export pixel art",
   "mcpName": "io.github.rxolve/pixscii",
   "type": "module",
   "main": "./dist/mcp.js",

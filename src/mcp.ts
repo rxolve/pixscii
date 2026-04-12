@@ -13,7 +13,10 @@ import { buildTilemap } from './tilemap.js';
 import { createAnimation, MOTION_TYPES } from './animate.js';
 import { resolveImageInput } from './resolve.js';
 import { quantizeToSprite } from './convert.js';
-import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES } from './constants.js';
+import { createEmpty } from './sprite.js';
+import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas } from './canvas.js';
+import { setPixels, drawLine, drawRect, floodFill, mirrorH } from './draw.js';
+import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES, MAX_PIXELS_PER_BATCH } from './constants.js';
 
 // Route import/export subcommands to CLI before starting MCP server
 const subcommand = process.argv[2];
@@ -25,7 +28,7 @@ if (subcommand === 'import' || subcommand === 'export') {
 
 const server = new McpServer({
   name: 'pixscii',
-  version: '0.1.0',
+  version: '0.2.0',
 });
 
 // --- search tool ---
@@ -120,18 +123,13 @@ server.tool(
       const pal = getPalette(paletteId);
       const sprite = await loadSpriteData(entry);
       const base64 = await renderToBase64(sprite, pal, scale);
+      const canvasId = storeCanvas({ data: sprite, width: sprite.width, height: sprite.height, palette: pal.id, prev: null });
+      const grid = inspectCanvas(canvasId, requireCanvas(canvasId));
 
       return {
         content: [
-          {
-            type: 'image' as const,
-            data: base64,
-            mimeType: 'image/png' as const,
-          },
-          {
-            type: 'text' as const,
-            text: `${entry.name} (${entry.id}) — ${entry.width}x${entry.height} @ ${scale ?? DEFAULT_SCALE}x, palette: ${pal.id}`,
-          },
+          { type: 'image' as const, data: base64, mimeType: 'image/png' as const },
+          { type: 'text' as const, text: `canvas_id: ${canvasId}\n\n${grid}` },
         ],
       };
     } catch (err) {
@@ -164,11 +162,13 @@ server.tool(
       const pal = getPalette(paletteId);
       const base64 = await renderToBase64(sprite, pal, scale);
       const desc = describeCharacter(options);
+      const canvasId = storeCanvas({ data: sprite, width: sprite.width, height: sprite.height, palette: pal.id, prev: null });
+      const grid = inspectCanvas(canvasId, requireCanvas(canvasId));
 
       return {
         content: [
           { type: 'image' as const, data: base64, mimeType: 'image/png' as const },
-          { type: 'text' as const, text: `Character "${seed}": ${desc} @ ${scale ?? DEFAULT_SCALE}x` },
+          { type: 'text' as const, text: `canvas_id: ${canvasId}\nCharacter "${seed}": ${desc}\n\n${grid}` },
         ],
       };
     } catch (err) {
@@ -261,11 +261,13 @@ server.tool(
       const sprite = await composeScene(layers, width, height);
       const pal = getPalette(paletteId);
       const base64 = await renderToBase64(sprite, pal, scale);
+      const canvasId = storeCanvas({ data: sprite, width: sprite.width, height: sprite.height, palette: pal.id, prev: null });
+      const grid = inspectCanvas(canvasId, requireCanvas(canvasId));
 
       return {
         content: [
           { type: 'image' as const, data: base64, mimeType: 'image/png' as const },
-          { type: 'text' as const, text: `Scene: ${width}x${height}, ${layers.length} layers @ ${scale ?? DEFAULT_SCALE}x` },
+          { type: 'text' as const, text: `canvas_id: ${canvasId}\nScene: ${width}x${height}, ${layers.length} layers\n\n${grid}` },
         ],
       };
     } catch (err) {
@@ -298,11 +300,13 @@ server.tool(
       const sprite = await buildTilemap(grid);
       const pal = getPalette(paletteId);
       const base64 = await renderToBase64(sprite, pal, scale);
+      const canvasId = storeCanvas({ data: sprite, width: sprite.width, height: sprite.height, palette: pal.id, prev: null });
+      const grid2 = inspectCanvas(canvasId, requireCanvas(canvasId));
 
       return {
         content: [
           { type: 'image' as const, data: base64, mimeType: 'image/png' as const },
-          { type: 'text' as const, text: `Tilemap: ${grid[0].length}x${grid.length} tiles (${sprite.width}x${sprite.height}px) @ ${scale ?? DEFAULT_SCALE}x` },
+          { type: 'text' as const, text: `canvas_id: ${canvasId}\nTilemap: ${grid[0].length}x${grid.length} tiles (${sprite.width}x${sprite.height}px)\n\n${grid2}` },
         ],
       };
     } catch (err) {
@@ -331,14 +335,13 @@ server.tool(
       const pal = getPalette(paletteId);
       const sprite = await quantizeToSprite(imageBuffer, pal, width, height);
       const base64 = await renderToBase64(sprite, pal, scale);
+      const canvasId = storeCanvas({ data: sprite, width: sprite.width, height: sprite.height, palette: pal.id, prev: null });
+      const grid = inspectCanvas(canvasId, requireCanvas(canvasId));
 
       return {
         content: [
           { type: 'image' as const, data: base64, mimeType: 'image/png' as const },
-          {
-            type: 'text' as const,
-            text: `Converted to ${sprite.width}x${sprite.height} pixel art (palette: ${pal.id})\nSprite data:\n${JSON.stringify(sprite)}`,
-          },
+          { type: 'text' as const, text: `canvas_id: ${canvasId}\n\n${grid}` },
         ],
       };
     } catch (err) {
@@ -346,6 +349,244 @@ server.tool(
         content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }],
         isError: true,
       };
+    }
+  },
+);
+
+// --- create tool ---
+server.tool(
+  'create',
+  'Create a new blank canvas for drawing. Returns canvas ID and hex grid for inspection.',
+  {
+    width: z.number().int().min(1).max(MAX_CANVAS_WIDTH).describe('Canvas width in pixels'),
+    height: z.number().int().min(1).max(MAX_CANVAS_HEIGHT).describe('Canvas height in pixels'),
+    fill: z.string().length(1).optional().describe('Fill color: hex char 0-F or "." for transparent (default ".")'),
+    palette: z.string().optional().describe('Palette ID (default "pico8")'),
+  },
+  async ({ width, height, fill, palette: paletteId }) => {
+    try {
+      const pal = getPalette(paletteId);
+      let data = createEmpty(width, height);
+      if (fill && fill !== '.') {
+        const c = parseColor(fill);
+        const coords: Array<{ x: number; y: number; color: number }> = [];
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            coords.push({ x, y, color: c });
+          }
+        }
+        data = setPixels(data, coords);
+      }
+      const id = storeCanvas({ data, width, height, palette: pal.id, prev: null });
+      const text = inspectCanvas(id, requireCanvas(id));
+      return { content: [{ type: 'text' as const, text }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- pixel tool ---
+server.tool(
+  'pixel',
+  'Set individual pixels on a canvas. Batch up to 512 pixels per call.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    pixels: z.array(z.object({
+      x: z.number().int().min(0).describe('X coordinate'),
+      y: z.number().int().min(0).describe('Y coordinate'),
+      color: z.string().length(1).describe('Hex char 0-F or "." for transparent'),
+    })).min(1).max(MAX_PIXELS_PER_BATCH).describe('Pixels to set'),
+  },
+  async ({ canvas_id, pixels }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const coords = pixels.map((p) => ({ x: p.x, y: p.y, color: parseColor(p.color) }));
+      const newData = setPixels(canvas.data, coords);
+      updateCanvas(canvas_id, newData);
+      return {
+        content: [{ type: 'text' as const, text: `canvas_id: ${canvas_id}\n${pixels.length} pixel(s) set.` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- line tool ---
+server.tool(
+  'line',
+  'Draw a line between two points on a canvas using Bresenham\'s algorithm.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    x1: z.number().int().describe('Start X'),
+    y1: z.number().int().describe('Start Y'),
+    x2: z.number().int().describe('End X'),
+    y2: z.number().int().describe('End Y'),
+    color: z.string().length(1).describe('Hex char 0-F or "." for transparent'),
+  },
+  async ({ canvas_id, x1, y1, x2, y2, color }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const c = parseColor(color);
+      const newData = drawLine(canvas.data, x1, y1, x2, y2, c);
+      updateCanvas(canvas_id, newData);
+      return {
+        content: [{ type: 'text' as const, text: `canvas_id: ${canvas_id}\nLine drawn from (${x1},${y1}) to (${x2},${y2}).` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- rect tool ---
+server.tool(
+  'rect',
+  'Draw a rectangle on a canvas (outline or filled).',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    x: z.number().int().describe('Top-left X'),
+    y: z.number().int().describe('Top-left Y'),
+    w: z.number().int().min(1).describe('Width'),
+    h: z.number().int().min(1).describe('Height'),
+    color: z.string().length(1).describe('Hex char 0-F or "." for transparent'),
+    filled: z.boolean().optional().describe('Fill the rectangle (default: false = outline only)'),
+  },
+  async ({ canvas_id, x, y, w, h, color, filled }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const c = parseColor(color);
+      const newData = drawRect(canvas.data, x, y, w, h, c, filled ?? false);
+      updateCanvas(canvas_id, newData);
+      return {
+        content: [{ type: 'text' as const, text: `canvas_id: ${canvas_id}\nRect ${filled ? 'filled' : 'outline'} at (${x},${y}) ${w}x${h}.` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- fill tool ---
+server.tool(
+  'fill',
+  'Flood fill from a point on a canvas. Returns the updated grid so you can verify the result.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    x: z.number().int().min(0).describe('Start X'),
+    y: z.number().int().min(0).describe('Start Y'),
+    color: z.string().length(1).describe('Hex char 0-F or "." for transparent'),
+  },
+  async ({ canvas_id, x, y, color }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const c = parseColor(color);
+      const { result, count, leaked } = floodFill(canvas.data, x, y, c);
+      updateCanvas(canvas_id, result);
+      const grid = inspectCanvas(canvas_id, requireCanvas(canvas_id));
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `filled: ${count} pixels\nleaked: ${leaked}\n\n${grid}`,
+        }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- mirror tool ---
+server.tool(
+  'mirror',
+  'Mirror a canvas horizontally (left half copied to right half). Returns the updated grid.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    axis_x: z.number().int().min(0).optional().describe('X coordinate of mirror axis (default: center)'),
+  },
+  async ({ canvas_id, axis_x }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const newData = mirrorH(canvas.data, axis_x);
+      updateCanvas(canvas_id, newData);
+      const grid = inspectCanvas(canvas_id, requireCanvas(canvas_id));
+      return { content: [{ type: 'text' as const, text: grid }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- inspect tool ---
+server.tool(
+  'inspect',
+  'Read the current pixel state of a canvas as a hex character grid. For canvases >32px, provide x,y,w,h to inspect a region.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    x: z.number().int().min(0).optional().describe('Region start X (for large canvases)'),
+    y: z.number().int().min(0).optional().describe('Region start Y (for large canvases)'),
+    w: z.number().int().min(1).optional().describe('Region width'),
+    h: z.number().int().min(1).optional().describe('Region height'),
+  },
+  async ({ canvas_id, x, y, w, h }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const opts = x !== undefined || y !== undefined ? { x, y, w, h } : undefined;
+      const text = inspectCanvas(canvas_id, canvas, opts);
+      return { content: [{ type: 'text' as const, text }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- undo tool ---
+server.tool(
+  'undo',
+  'Revert the last drawing operation on a canvas. Single-step undo.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+  },
+  async ({ canvas_id }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      if (!canvas.prev) {
+        return {
+          content: [{ type: 'text' as const, text: 'No previous state to undo.' }],
+          isError: true,
+        };
+      }
+      setCanvasDirectly(canvas_id, { ...canvas, data: canvas.prev, prev: null });
+      const grid = inspectCanvas(canvas_id, requireCanvas(canvas_id));
+      return { content: [{ type: 'text' as const, text: `Undone.\n\n${grid}` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- export tool ---
+server.tool(
+  'export',
+  'Export a canvas as a scaled PNG image.',
+  {
+    canvas_id: z.string().describe('Canvas ID'),
+    scale: z.number().int().min(1).max(MAX_SCALE).optional().describe(`Scale factor (default ${DEFAULT_SCALE})`),
+  },
+  async ({ canvas_id, scale }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const pal = getPalette(canvas.palette);
+      const base64 = await renderToBase64(canvas.data, pal, scale);
+      return {
+        content: [
+          { type: 'image' as const, data: base64, mimeType: 'image/png' as const },
+          { type: 'text' as const, text: `${canvas.width}x${canvas.height} @ ${scale ?? DEFAULT_SCALE}x, palette: ${pal.id}` },
+        ],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
     }
   },
 );

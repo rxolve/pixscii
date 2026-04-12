@@ -1,6 +1,7 @@
 import type { SpriteData } from './types.js';
 import { getById, loadSpriteData } from './store.js';
 import { createEmpty, overlayPart } from './sprite.js';
+import { getCanvas } from './canvas.js';
 
 /** Build a tilemap from a 2D grid of sprite IDs */
 export async function buildTilemap(grid: string[][]): Promise<SpriteData> {
@@ -24,10 +25,19 @@ export async function buildTilemap(grid: string[][]): Promise<SpriteData> {
       const id = grid[row][col];
       if (!id || id === '' || id === 'empty') continue;
 
-      const entry = getById(id);
-      if (!entry) throw new Error(`Tile "${id}" not found in sprite index`);
+      let sprite: SpriteData;
 
-      const sprite = await loadSpriteData(entry);
+      // 1. Check canvas store first
+      const cv = getCanvas(id);
+      if (cv) {
+        sprite = cv.data;
+      } else {
+        // 2. Check sprite index
+        const entry = getById(id);
+        if (!entry) throw new Error(`Tile "${id}" not found`);
+        sprite = await loadSpriteData(entry);
+      }
+
       canvas = overlayPart(canvas, sprite, col * tileW, row * tileH);
     }
   }
