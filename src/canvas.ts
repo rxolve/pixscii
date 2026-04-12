@@ -1,9 +1,11 @@
 import type { SpriteData, Canvas } from './types.js';
-import { MAX_CANVAS_COUNT, CANVAS_ID_PREFIX, INSPECT_FULL_THRESHOLD, MAX_SNAPSHOTS_PER_CANVAS, MAX_SNAPSHOT_NAME_LENGTH } from './constants.js';
+import { MAX_CANVAS_COUNT, CANVAS_ID_PREFIX, INSPECT_FULL_THRESHOLD, MAX_SNAPSHOTS_PER_CANVAS, MAX_SNAPSHOT_NAME_LENGTH, MAX_ALIAS_LENGTH, ALIAS_PATTERN } from './constants.js';
 
 // --- Canvas store ---
 
 const canvasStore = new Map<string, Canvas>();
+/** alias name -> canonical canvas id */
+const aliasStore = new Map<string, string>();
 let _counter = 0;
 
 export function generateCanvasId(): string {
@@ -14,9 +16,23 @@ export function generateCanvasId(): string {
   return `${CANVAS_ID_PREFIX}-${rand}-${seq}`;
 }
 
+/** Resolve an alias or raw canvas id to the canonical id. Returns the input
+ *  unchanged if it's already a canvas id or if the alias is unknown — the
+ *  caller surfaces a "not found" error at lookup time. */
+export function resolveCanvasId(idOrAlias: string): string {
+  if (canvasStore.has(idOrAlias)) return idOrAlias;
+  const aliased = aliasStore.get(idOrAlias);
+  if (aliased && canvasStore.has(aliased)) return aliased;
+  return idOrAlias;
+}
+
 export function storeCanvas(canvas: Canvas): string {
   if (canvasStore.size >= MAX_CANVAS_COUNT) {
     const oldest = canvasStore.keys().next().value!;
+    // Also drop any aliases that pointed at the evicted canvas.
+    for (const [alias, target] of aliasStore) {
+      if (target === oldest) aliasStore.delete(alias);
+    }
     canvasStore.delete(oldest);
   }
   const id = generateCanvasId();
@@ -24,26 +40,34 @@ export function storeCanvas(canvas: Canvas): string {
   return id;
 }
 
-export function getCanvas(id: string): Canvas | undefined {
-  return canvasStore.get(id);
+export function getCanvas(idOrAlias: string): Canvas | undefined {
+  return canvasStore.get(resolveCanvasId(idOrAlias));
 }
 
-export function requireCanvas(id: string): Canvas {
+export function requireCanvas(idOrAlias: string): Canvas {
+  const id = resolveCanvasId(idOrAlias);
   const c = canvasStore.get(id);
-  if (!c) throw new Error(`Canvas "${id}" not found`);
+  if (!c) throw new Error(`Canvas "${idOrAlias}" not found`);
   return c;
 }
 
-export function updateCanvas(id: string, newData: SpriteData): void {
+export function updateCanvas(idOrAlias: string, newData: SpriteData): void {
+  const id = resolveCanvasId(idOrAlias);
   const c = requireCanvas(id);
   canvasStore.set(id, { ...c, prev: c.data, data: newData });
 }
 
-export function setCanvasDirectly(id: string, canvas: Canvas): void {
-  canvasStore.set(id, canvas);
+export function setCanvasDirectly(idOrAlias: string, canvas: Canvas): void {
+  canvasStore.set(resolveCanvasId(idOrAlias), canvas);
 }
 
-export function deleteCanvas(id: string): boolean {
+/** Delete a canvas and any aliases that pointed at it. */
+export function deleteCanvas(idOrAlias: string): boolean {
+  const id = resolveCanvasId(idOrAlias);
+  if (!canvasStore.has(id)) return false;
+  for (const [alias, target] of aliasStore) {
+    if (target === id) aliasStore.delete(alias);
+  }
   return canvasStore.delete(id);
 }
 
@@ -51,9 +75,51 @@ export function listCanvases(): string[] {
   return [...canvasStore.keys()];
 }
 
+// --- Alias management ---
+
+/** Validate and register an alias -> canvas-id mapping. Throws on conflicts. */
+export function setAlias(name: string, idOrAlias: string): string {
+  if (name.length === 0) throw new Error('Alias name cannot be empty');
+  if (name.length > MAX_ALIAS_LENGTH) {
+    throw new Error(`Alias exceeds ${MAX_ALIAS_LENGTH} chars`);
+  }
+  if (!ALIAS_PATTERN.test(name)) {
+    throw new Error(`Alias "${name}" must match ${ALIAS_PATTERN} (lowercase letters, digits, "_", "-"; not starting with "${CANVAS_ID_PREFIX}-")`);
+  }
+  if (name.startsWith(`${CANVAS_ID_PREFIX}-`)) {
+    throw new Error(`Alias cannot start with "${CANVAS_ID_PREFIX}-" (reserved for canvas IDs)`);
+  }
+  if (canvasStore.has(name)) {
+    throw new Error(`Alias "${name}" collides with a canvas id`);
+  }
+  const id = resolveCanvasId(idOrAlias);
+  if (!canvasStore.has(id)) {
+    throw new Error(`Canvas "${idOrAlias}" not found`);
+  }
+  aliasStore.set(name, id);
+  return id;
+}
+
+/** Return aliases pointing at a given canvas id. */
+export function aliasesFor(id: string): string[] {
+  const out: string[] = [];
+  for (const [alias, target] of aliasStore) {
+    if (target === id) out.push(alias);
+  }
+  return out;
+}
+
+/** Reset store — for testing only */
+export function _resetStore(): void {
+  canvasStore.clear();
+  aliasStore.clear();
+  _counter = 0;
+}
+
 /** Metadata for a canvas in the store */
 export interface CanvasMeta {
   id: string;
+  aliases: string[];
   width: number;
   height: number;
   palette: string;
@@ -67,6 +133,7 @@ export function listCanvasesWithMeta(): CanvasMeta[] {
   for (const [id, c] of canvasStore) {
     out.push({
       id,
+      aliases: aliasesFor(id),
       width: c.width,
       height: c.height,
       palette: c.palette,
@@ -100,14 +167,15 @@ function validateSnapshotName(name: string): void {
 }
 
 /** Save the current canvas state under a name. Returns the new snapshot count. */
-export function snapshotCanvas(id: string, name: string): number {
+export function snapshotCanvas(idOrAlias: string, name: string): number {
   validateSnapshotName(name);
+  const id = resolveCanvasId(idOrAlias);
   const c = requireCanvas(id);
   const snapshots = c.snapshots ?? new Map<string, SpriteData>();
   // Adding a new name (not overwriting) — enforce the limit.
   if (!snapshots.has(name) && snapshots.size >= MAX_SNAPSHOTS_PER_CANVAS) {
     throw new Error(
-      `Canvas "${id}" already holds ${MAX_SNAPSHOTS_PER_CANVAS} snapshots (max). Overwrite an existing name instead.`,
+      `Canvas "${idOrAlias}" already holds ${MAX_SNAPSHOTS_PER_CANVAS} snapshots (max). Overwrite an existing name instead.`,
     );
   }
   // Deep-copy the current pixels so later edits can't mutate the snapshot.
@@ -122,13 +190,14 @@ export function snapshotCanvas(id: string, name: string): number {
 }
 
 /** Restore a named snapshot onto a canvas. The current state becomes prev. */
-export function restoreSnapshot(id: string, name: string): void {
+export function restoreSnapshot(idOrAlias: string, name: string): void {
+  const id = resolveCanvasId(idOrAlias);
   const c = requireCanvas(id);
   const snap = c.snapshots?.get(name);
   if (!snap) {
     const available = c.snapshots ? [...c.snapshots.keys()] : [];
     const list = available.length > 0 ? available.join(', ') : '(none)';
-    throw new Error(`Snapshot "${name}" not found on ${id}. Available: ${list}`);
+    throw new Error(`Snapshot "${name}" not found on ${idOrAlias}. Available: ${list}`);
   }
   // Deep-copy on restore so future edits don't mutate the snapshot.
   const data: SpriteData = {
@@ -146,8 +215,8 @@ export function restoreSnapshot(id: string, name: string): void {
 }
 
 /** List snapshot names on a canvas. */
-export function listSnapshots(id: string): string[] {
-  const c = requireCanvas(id);
+export function listSnapshots(idOrAlias: string): string[] {
+  const c = requireCanvas(idOrAlias);
   return c.snapshots ? [...c.snapshots.keys()] : [];
 }
 
@@ -155,7 +224,8 @@ export function listSnapshots(id: string): string[] {
  * Replace a canvas's data and sync width/height from the new pixel grid.
  * The old data becomes prev (so undo rolls back the resize).
  */
-export function resizeCanvas(id: string, newData: SpriteData): void {
+export function resizeCanvas(idOrAlias: string, newData: SpriteData): void {
+  const id = resolveCanvasId(idOrAlias);
   const c = requireCanvas(id);
   canvasStore.set(id, {
     ...c,
@@ -171,7 +241,8 @@ export function resizeCanvas(id: string, newData: SpriteData): void {
  * Colors 0-F mean different RGB values under different palettes.
  * Caller is responsible for validating paletteId against loaded palettes.
  */
-export function setCanvasPalette(id: string, paletteId: string): void {
+export function setCanvasPalette(idOrAlias: string, paletteId: string): void {
+  const id = resolveCanvasId(idOrAlias);
   const c = requireCanvas(id);
   canvasStore.set(id, { ...c, palette: paletteId });
 }
@@ -222,10 +293,71 @@ export function diffCanvases(aId: string, bId: string): DiffSummary {
   return { width: a.width, height: a.height, changed, grid: lines.join('\n') };
 }
 
-/** Reset store — for testing only */
-export function _resetStore(): void {
-  canvasStore.clear();
-  _counter = 0;
+// --- Bounding box and stat ---
+
+/** Tight bounding box of non-transparent content, or null if fully transparent. */
+export interface BoundingBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export function computeBoundingBox(data: SpriteData): BoundingBox | null {
+  let minX = data.width;
+  let minY = data.height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < data.height; y++) {
+    const row = data.pixels[y];
+    for (let x = 0; x < data.width; x++) {
+      if (row[x] >= 0) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return null;
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
+/** Detailed metadata for a single canvas. */
+export interface CanvasStat {
+  id: string;
+  aliases: string[];
+  width: number;
+  height: number;
+  palette: string;
+  nonTransparent: number;
+  total: number;
+  bbox: BoundingBox | null;
+  colors: Array<{ index: number; count: number }>;
+  hasUndo: boolean;
+  snapshotNames: string[];
+}
+
+export function statCanvas(idOrAlias: string): CanvasStat {
+  const id = resolveCanvasId(idOrAlias);
+  const c = requireCanvas(id);
+  const stats = colorStats(c.data);
+  const colors = [...stats.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([index, count]) => ({ index, count }));
+  return {
+    id,
+    aliases: aliasesFor(id),
+    width: c.width,
+    height: c.height,
+    palette: c.palette,
+    nonTransparent: countNonTransparent(c.data),
+    total: c.width * c.height,
+    bbox: computeBoundingBox(c.data),
+    colors,
+    hasUndo: c.prev !== null,
+    snapshotNames: c.snapshots ? [...c.snapshots.keys()] : [],
+  };
 }
 
 // --- Hex color protocol ---

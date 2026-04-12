@@ -96,3 +96,9 @@ export const MAX_SNAPSHOTS_PER_CANVAS = 16;
 
 /** Maximum snapshot name length */
 export const MAX_SNAPSHOT_NAME_LENGTH = 64;
+
+/** Maximum alias length */
+export const MAX_ALIAS_LENGTH = 32;
+
+/** Allowed alias characters: lowercase letters, digits, underscore, hyphen */
+export const ALIAS_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;

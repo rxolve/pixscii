@@ -14,13 +14,13 @@ import { createAnimation, MOTION_TYPES } from './animate.js';
 import { resolveImageInput } from './resolve.js';
 import { quantizeToSprite } from './convert.js';
 import { createEmpty, mergeHorizontal, mergeVertical, mergeGrid } from './sprite.js';
-import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas, listCanvasesWithMeta, cloneCanvas, diffCanvases, snapshotCanvas, restoreSnapshot, listSnapshots, setCanvasPalette, deleteCanvas, listCanvases, resizeCanvas } from './canvas.js';
+import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas, listCanvasesWithMeta, cloneCanvas, diffCanvases, snapshotCanvas, restoreSnapshot, listSnapshots, setCanvasPalette, deleteCanvas, listCanvases, resizeCanvas, setAlias, statCanvas, computeBoundingBox, resolveCanvasId, aliasesFor } from './canvas.js';
 import { listPalettes } from './palette.js';
 import { setPixels, drawLine, drawRect, floodFill, mirrorH, copyRegion, shiftSprite, resizeSprite } from './draw.js';
 import { composeAllFrames } from './scene.js';
 import type { ActorDef, SceneDef } from './scene.js';
 import type { SpriteData, MotionType } from './types.js';
-import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES, MAX_PIXELS_PER_BATCH, MAX_SEQUENCE_FRAMES, MAX_SEQUENCE_ACTORS, MAX_SEQUENCE_POSES, MAX_SPRITESHEET_FRAMES, MAX_SNAPSHOT_NAME_LENGTH } from './constants.js';
+import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES, MAX_PIXELS_PER_BATCH, MAX_SEQUENCE_FRAMES, MAX_SEQUENCE_ACTORS, MAX_SEQUENCE_POSES, MAX_SPRITESHEET_FRAMES, MAX_SNAPSHOT_NAME_LENGTH, MAX_ALIAS_LENGTH } from './constants.js';
 
 // Route import/export subcommands to CLI before starting MCP server
 const subcommand = process.argv[2];
@@ -578,10 +578,10 @@ server.tool(
       if (metas.length === 0) {
         return { content: [{ type: 'text' as const, text: 'No canvases in session.' }] };
       }
-      const lines = metas.map(
-        (m) =>
-          `- ${m.id} | ${m.width}x${m.height} | palette: ${m.palette} | pixels: ${m.nonTransparent}/${m.width * m.height} | undo: ${m.hasUndo ? 'yes' : 'no'} | snapshots: ${m.snapshotCount}`,
-      );
+      const lines = metas.map((m) => {
+        const aliasTag = m.aliases.length > 0 ? ` [${m.aliases.join(', ')}]` : '';
+        return `- ${m.id}${aliasTag} | ${m.width}x${m.height} | palette: ${m.palette} | pixels: ${m.nonTransparent}/${m.width * m.height} | undo: ${m.hasUndo ? 'yes' : 'no'} | snapshots: ${m.snapshotCount}`;
+      });
       const text = `Live canvases (${metas.length}):\n${lines.join('\n')}`;
       return { content: [{ type: 'text' as const, text }] };
     } catch (err) {
@@ -708,6 +708,113 @@ server.tool(
       });
       return {
         content: [{ type: 'text' as const, text: `Palettes (${ids.length}):\n${lines.join('\n')}` }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- stat tool ---
+server.tool(
+  'stat',
+  'Deep introspection of a single canvas. Returns dimensions, palette, aliases, non-transparent count, tight content bounding box, per-color histogram with palette names, snapshot names, and undo state. Friendlier than raw inspect for planning next edits.',
+  {
+    canvas_id: z.string().describe('Canvas ID or alias'),
+  },
+  async ({ canvas_id }) => {
+    try {
+      const s = statCanvas(canvas_id);
+      const pal = getPalette(s.palette);
+      const lines: string[] = [];
+      lines.push(`id: ${s.id}`);
+      if (s.aliases.length > 0) lines.push(`aliases: ${s.aliases.join(', ')}`);
+      lines.push(`size: ${s.width}x${s.height} | palette: ${s.palette}`);
+      const pct = s.total > 0 ? ((100 * s.nonTransparent) / s.total).toFixed(1) : '0.0';
+      lines.push(`filled: ${s.nonTransparent}/${s.total} (${pct}%)`);
+      lines.push(
+        s.bbox
+          ? `bbox: (${s.bbox.x},${s.bbox.y}) ${s.bbox.w}x${s.bbox.h}`
+          : 'bbox: (empty — fully transparent)',
+      );
+      if (s.colors.length > 0) {
+        lines.push('colors:');
+        for (const { index, count } of s.colors) {
+          const color = pal.colors.find((c) => c.index === index);
+          const name = color ? color.name : '?';
+          const hex = index.toString(16).toUpperCase();
+          lines.push(`  ${hex} (${name}): ${count}`);
+        }
+      }
+      lines.push(`undo: ${s.hasUndo ? 'yes' : 'no'}`);
+      lines.push(
+        s.snapshotNames.length > 0
+          ? `snapshots: ${s.snapshotNames.join(', ')}`
+          : 'snapshots: (none)',
+      );
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- alias tool ---
+server.tool(
+  'alias',
+  'Assign a human-readable alias to a canvas. After aliasing, any tool that accepts a canvas_id will also accept the alias. Useful for long multi-canvas sessions where "hero" is easier to track than "cvs-f5a8-006". Aliases are lowercase letters/digits/underscore/hyphen, must not start with "cvs-", and are released when the canvas is killed.',
+  {
+    canvas_id: z.string().describe('Canvas ID (or an existing alias pointing to the target canvas)'),
+    name: z.string().min(1).max(MAX_ALIAS_LENGTH).describe('Alias name to assign'),
+  },
+  async ({ canvas_id, name }) => {
+    try {
+      const resolvedId = setAlias(name, canvas_id);
+      const all = aliasesFor(resolvedId);
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Alias "${name}" -> ${resolvedId}. All aliases for this canvas: ${all.join(', ')}`,
+        }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- crop tool ---
+server.tool(
+  'crop',
+  'Shrink a canvas to the tight bounding box of its non-transparent content. Equivalent to stat + resize with the bbox as the new dimensions. Errors if the canvas is fully transparent.',
+  {
+    canvas_id: z.string().describe('Canvas ID or alias'),
+  },
+  async ({ canvas_id }) => {
+    try {
+      const canvas = requireCanvas(canvas_id);
+      const bbox = computeBoundingBox(canvas.data);
+      if (!bbox) {
+        return {
+          content: [{ type: 'text' as const, text: `Canvas "${canvas_id}" is fully transparent — nothing to crop.` }],
+          isError: true,
+        };
+      }
+      // If the bbox already covers the whole canvas, no-op.
+      if (bbox.x === 0 && bbox.y === 0 && bbox.w === canvas.width && bbox.h === canvas.height) {
+        return {
+          content: [{ type: 'text' as const, text: `Canvas "${canvas_id}" already tight — no crop needed.` }],
+        };
+      }
+      // Reuse resizeSprite with a negative offset so the bbox slides to (0,0).
+      const newData = resizeSprite(canvas.data, bbox.w, bbox.h, -bbox.x, -bbox.y);
+      resizeCanvas(canvas_id, newData);
+      const grid = inspectCanvas(resolveCanvasId(canvas_id), requireCanvas(canvas_id));
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Cropped ${canvas_id}: ${canvas.width}x${canvas.height} -> ${bbox.w}x${bbox.h} (bbox was at ${bbox.x},${bbox.y}).\n\n${grid}`,
+        }],
       };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };

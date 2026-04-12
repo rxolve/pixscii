@@ -17,6 +17,11 @@ import {
   listSnapshots,
   setCanvasPalette,
   resizeCanvas,
+  setAlias,
+  aliasesFor,
+  resolveCanvasId,
+  statCanvas,
+  computeBoundingBox,
   _resetStore,
 } from './canvas.js';
 import { MAX_SNAPSHOTS_PER_CANVAS } from './constants.js';
@@ -405,5 +410,144 @@ describe('setCanvasPalette', () => {
     const updated = requireCanvas(id);
     expect(updated.palette).toBe('grayscale');
     expect(updated.data.pixels[0][0]).toBe(5);
+  });
+});
+
+describe('aliases', () => {
+  it('setAlias resolves an alias back to the canonical id', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    setAlias('hero', id);
+    expect(resolveCanvasId('hero')).toBe(id);
+    expect(requireCanvas('hero').width).toBe(2);
+  });
+
+  it('multiple aliases can point at the same canvas', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    setAlias('hero', id);
+    setAlias('mainchar', id);
+    expect(aliasesFor(id).sort()).toEqual(['hero', 'mainchar']);
+  });
+
+  it('killing a canvas releases its aliases', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    setAlias('hero', id);
+    deleteCanvas(id);
+    // Alias should no longer resolve.
+    expect(() => requireCanvas('hero')).toThrow();
+    expect(aliasesFor(id)).toEqual([]);
+  });
+
+  it('kill accepts an alias as the target', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    setAlias('hero', id);
+    expect(deleteCanvas('hero')).toBe(true);
+    expect(requireCanvas).toThrow; // typeof check; silence unused
+    expect(() => requireCanvas(id)).toThrow();
+  });
+
+  it('rejects invalid alias characters', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    expect(() => setAlias('Has Space', id)).toThrow();
+    expect(() => setAlias('UPPER', id)).toThrow();
+    expect(() => setAlias('-startsWithDash', id)).toThrow();
+  });
+
+  it('rejects aliases starting with the canvas id prefix', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    expect(() => setAlias('cvs-fake', id)).toThrow(/cvs-/);
+  });
+
+  it('rejects empty and overlong aliases', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    expect(() => setAlias('', id)).toThrow('empty');
+    expect(() => setAlias('a'.repeat(64), id)).toThrow('exceeds');
+  });
+
+  it('reassigning an alias points it at a new canvas', () => {
+    const a = storeCanvas(makeCanvas(2, 2));
+    const b = storeCanvas(makeCanvas(4, 4));
+    setAlias('active', a);
+    setAlias('active', b);
+    expect(requireCanvas('active').width).toBe(4);
+    expect(aliasesFor(a)).toEqual([]);
+    expect(aliasesFor(b)).toEqual(['active']);
+  });
+
+  it('alias can be used anywhere canvas_id is accepted — updateCanvas', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    setAlias('hero', id);
+    updateCanvas('hero', { width: 2, height: 2, pixels: [[1, 1], [1, 1]] });
+    expect(requireCanvas(id).data.pixels[0][0]).toBe(1);
+  });
+
+  it('alias survives through snapshot + restore', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    setAlias('hero', id);
+    snapshotCanvas('hero', 'v1');
+    updateCanvas('hero', { width: 2, height: 2, pixels: [[9, 9], [9, 9]] });
+    restoreSnapshot('hero', 'v1');
+    expect(aliasesFor(id)).toEqual(['hero']);
+  });
+
+  it('unknown alias throws on requireCanvas', () => {
+    expect(() => requireCanvas('ghost')).toThrow(/not found/);
+  });
+
+  it('aliases surface in listCanvasesWithMeta', () => {
+    const id = storeCanvas(makeCanvas(2, 2));
+    setAlias('hero', id);
+    const meta = listCanvasesWithMeta().find((m) => m.id === id)!;
+    expect(meta.aliases).toEqual(['hero']);
+  });
+});
+
+describe('computeBoundingBox', () => {
+  it('returns null for fully transparent sprites', () => {
+    const c = makeCanvas(4, 4);
+    expect(computeBoundingBox(c.data)).toBeNull();
+  });
+
+  it('returns a single pixel bbox', () => {
+    const c = makeCanvas(4, 4);
+    c.data.pixels[2][1] = 5;
+    expect(computeBoundingBox(c.data)).toEqual({ x: 1, y: 2, w: 1, h: 1 });
+  });
+
+  it('spans from first to last non-transparent pixel', () => {
+    const c = makeCanvas(8, 8);
+    c.data.pixels[1][2] = 1;
+    c.data.pixels[5][6] = 2;
+    expect(computeBoundingBox(c.data)).toEqual({ x: 2, y: 1, w: 5, h: 5 });
+  });
+});
+
+describe('statCanvas', () => {
+  it('returns structured metadata with bbox and color histogram', () => {
+    const c = makeCanvas(4, 4);
+    c.data.pixels[1][1] = 8;
+    c.data.pixels[1][2] = 8;
+    c.data.pixels[2][1] = 1;
+    const id = storeCanvas(c);
+    setAlias('hero', id);
+
+    const s = statCanvas('hero');
+    expect(s.id).toBe(id);
+    expect(s.aliases).toEqual(['hero']);
+    expect(s.width).toBe(4);
+    expect(s.height).toBe(4);
+    expect(s.nonTransparent).toBe(3);
+    expect(s.total).toBe(16);
+    expect(s.bbox).toEqual({ x: 1, y: 1, w: 2, h: 2 });
+    // Color histogram sorted by index.
+    expect(s.colors).toEqual([
+      { index: 1, count: 1 },
+      { index: 8, count: 2 },
+    ]);
+    expect(s.hasUndo).toBe(false);
+  });
+
+  it('reports null bbox for fully transparent canvas', () => {
+    const id = storeCanvas(makeCanvas(4, 4));
+    expect(statCanvas(id).bbox).toBeNull();
   });
 });

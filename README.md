@@ -33,7 +33,7 @@ Or add to your MCP client config:
 }
 ```
 
-## Syscalls (27)
+## Syscalls (30)
 
 ### Source — allocate a canvas
 
@@ -56,6 +56,7 @@ Or add to your MCP client config:
 | `mirror` | Mirror left half to right half |
 | `shift` | Shift all pixels by (dx, dy); optional wraparound |
 | `resize` | Crop or extend the canvas to new dimensions (in-place, with offset) |
+| `crop` | Shrink the canvas to the tight bounding box of its non-transparent content |
 | `undo` | Revert the last drawing operation |
 | `copy` | Blit a rectangular region from one canvas onto another (supports self-copy with overlap) |
 | `repalette` | Switch a canvas's palette mode without touching pixel indices |
@@ -66,6 +67,7 @@ Or add to your MCP client config:
 |------|-------------|
 | `inspect` | View the canvas as a hex character grid |
 | `list` | List every live canvas in the session (dimensions, palette, pixel count, undo state) |
+| `stat` | Deep single-canvas metadata — aliases, bounding box, color histogram with palette names, snapshot names |
 | `diff` | Pixel-level diff between two canvases — unchanged pixels as `=`, changes as the new color |
 | `palettes` | List all loaded palette IDs and color counts (discovery for `repalette`) |
 
@@ -76,7 +78,8 @@ Or add to your MCP client config:
 | `clone` | Fork a canvas into a fresh ID so you can branch edits safely |
 | `snapshot` | Save the current canvas state under a name (multi-step checkpoint beyond single `undo`) |
 | `restore` | Restore a named snapshot; current state becomes `prev` so you can still `undo` the restore |
-| `kill` | Free a canvas slot (and its snapshots) so the 40-canvas FIFO limit doesn't evict something you care about |
+| `alias` | Give a canvas a human-readable name that works anywhere a `canvas_id` is accepted |
+| `kill` | Free a canvas slot (and its aliases + snapshots) so the 40-canvas FIFO limit doesn't evict something you care about |
 
 ### Compose & output
 
@@ -158,9 +161,9 @@ Sometimes the agent wants to try a change without losing the current state. The 
 ```
 → list {}
 ← Live canvases (3):
-  - cvs-a3f2-001 | 16x16 | palette: pico8 | pixels: 78/256  | undo: yes | snapshots: 2
-  - cvs-b3c5-002 | 16x16 | palette: pico8 | pixels: 142/256 | undo: no  | snapshots: 0
-  - cvs-e4f7-005 | 64x64 | palette: pico8 | pixels: 2048/4096 | undo: no | snapshots: 0
+  - cvs-a3f2-001 [hero] | 16x16 | palette: pico8 | pixels: 78/256  | undo: yes | snapshots: 2
+  - cvs-b3c5-002       | 16x16 | palette: pico8 | pixels: 142/256 | undo: no  | snapshots: 0
+  - cvs-e4f7-005 [dungeon] | 64x64 | palette: pico8 | pixels: 2048/4096 | undo: no | snapshots: 0
 ```
 
 Useful when an agent loses track of which canvas holds what — especially after a long `compose` / `tilemap` / `character` chain.
@@ -251,6 +254,60 @@ Kills the canvas and all its snapshots. Reclaims one slot.
 Grows a 16×16 into a 32×32 with the old content centered. Combined with `copy`, this is how you pull a tight sprite into a scene-sized canvas without starting over.
 
 Both `shift` and `resize` participate in single-step undo, so one bad reframe is always recoverable.
+
+## Names, not IDs: `alias`
+
+Raw canvas IDs like `cvs-f5a8-006` are fine for one-off edits but painful across a long session. `alias` gives any canvas a human-readable name that every tool recognizes:
+
+```
+→ character { seed: "hero" }
+← canvas_id: cvs-f5a8-006
+
+→ alias { canvas_id: "cvs-f5a8-006", name: "hero" }
+← Alias "hero" -> cvs-f5a8-006.
+
+→ rect { canvas_id: "hero", x: 6, y: 4, w: 4, h: 1, color: "8" }
+→ snapshot { canvas_id: "hero", name: "v1" }
+→ inspect { canvas_id: "hero" }
+```
+
+Every `canvas_id` parameter accepts an alias. Rules: lowercase letters / digits / `_` / `-`, not starting with `cvs-`, up to 32 chars. Aliases are released when the canvas is killed, and `list` shows them in brackets.
+
+## Deep introspection: `stat`
+
+Where `inspect` shows the raw hex grid, `stat` shows the agent-oriented summary — useful for planning the next edit without re-parsing pixels.
+
+```
+→ stat { canvas_id: "hero" }
+← id: cvs-f5a8-006
+  aliases: hero
+  size: 16x16 | palette: pico8
+  filled: 78/256 (30.5%)
+  bbox: (3,1) 10x14
+  colors:
+    1 (dark-blue): 32
+    7 (white): 8
+    8 (red): 30
+    2 (dark-purple): 8
+  undo: yes
+  snapshots: before-shading, v1
+```
+
+The bbox is tight — just the non-transparent region — which is exactly what `crop` uses.
+
+## Tightening: `crop`
+
+`crop` shrinks a canvas to the bounding box of its content. No more transparent margins; the sprite becomes exactly as big as it needs to be.
+
+```
+→ stat { canvas_id: "hero" }
+← bbox: (3,1) 10x14  (so there's 3px of left padding, 1px of top padding)
+
+→ crop { canvas_id: "hero" }
+← Cropped hero: 16x16 -> 10x14 (bbox was at 3,1).
+```
+
+Errors if the canvas is fully transparent. No-ops if the content already fills the canvas. Participates in undo.
 
 ## Discovering palettes
 
