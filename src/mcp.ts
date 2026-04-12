@@ -13,10 +13,12 @@ import { buildTilemap } from './tilemap.js';
 import { createAnimation, MOTION_TYPES } from './animate.js';
 import { resolveImageInput } from './resolve.js';
 import { quantizeToSprite } from './convert.js';
-import { createEmpty } from './sprite.js';
+import { createEmpty, mergeHorizontal, mergeVertical, mergeGrid } from './sprite.js';
 import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas } from './canvas.js';
 import { setPixels, drawLine, drawRect, floodFill, mirrorH } from './draw.js';
-import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES, MAX_PIXELS_PER_BATCH } from './constants.js';
+import { composeAllFrames, computeFrameCount } from './scene.js';
+import type { ActorDef, SceneDef } from './scene.js';
+import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, MAX_COMPOSE_LAYERS, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES, MAX_PIXELS_PER_BATCH, MAX_SEQUENCE_FRAMES, MAX_SEQUENCE_ACTORS, MAX_SEQUENCE_POSES, MAX_SPRITESHEET_FRAMES } from './constants.js';
 
 // Route import/export subcommands to CLI before starting MCP server
 const subcommand = process.argv[2];
@@ -28,7 +30,7 @@ if (subcommand === 'import' || subcommand === 'export') {
 
 const server = new McpServer({
   name: 'pixscii',
-  version: '0.2.0',
+  version: '0.2.1',
 });
 
 // --- search tool ---
@@ -583,6 +585,116 @@ server.tool(
         content: [
           { type: 'image' as const, data: base64, mimeType: 'image/png' as const },
           { type: 'text' as const, text: `${canvas.width}x${canvas.height} @ ${scale ?? DEFAULT_SCALE}x, palette: ${pal.id}` },
+        ],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- sequence tool ---
+server.tool(
+  'sequence',
+  'Animate actors across a scene. Each actor has a pose cycle and a path of positions. Returns one PNG per frame.',
+  {
+    background: z.string().optional().describe('Canvas ID for the background (omit for transparent)'),
+    width: z.number().int().min(16).max(MAX_CANVAS_WIDTH).describe('Scene width in pixels'),
+    height: z.number().int().min(16).max(MAX_CANVAS_HEIGHT).describe('Scene height in pixels'),
+    actors: z.array(z.object({
+      poses: z.array(z.string()).min(1).max(MAX_SEQUENCE_POSES).describe('Canvas IDs for pose cycle'),
+      path: z.array(z.object({
+        x: z.number().int().describe('X position'),
+        y: z.number().int().describe('Y position'),
+      })).min(1).describe('Position per frame (frame count = longest path)'),
+    })).min(1).max(MAX_SEQUENCE_ACTORS).describe('Actors to animate'),
+    delay: z.number().int().min(50).max(2000).optional().describe('ms between frames (default 150)'),
+    scale: z.number().int().min(1).max(MAX_SCALE).optional().describe(`Scale factor (default ${DEFAULT_SCALE})`),
+    palette: z.string().optional().describe('Palette ID (default "pico8")'),
+  },
+  async ({ background, width, height, actors, delay, scale, palette: paletteId }) => {
+    try {
+      const pal = getPalette(paletteId);
+      const bgData = background ? requireCanvas(background).data : null;
+
+      const actorDefs: ActorDef[] = actors.map((a) => ({
+        poses: a.poses.map((id) => requireCanvas(id).data),
+        path: a.path,
+      }));
+
+      const scene: SceneDef = { background: bgData, width, height, actors: actorDefs };
+      let frames = composeAllFrames(scene);
+
+      let truncated = false;
+      if (frames.length > MAX_SEQUENCE_FRAMES) {
+        frames = frames.slice(0, MAX_SEQUENCE_FRAMES);
+        truncated = true;
+      }
+
+      const frameImages = await Promise.all(
+        frames.map((f) => renderToBase64(f, pal, scale)),
+      );
+
+      const frameIds = frames.map((f) =>
+        storeCanvas({ data: f, width, height, palette: pal.id, prev: null }),
+      );
+
+      const content: ({ type: 'image'; data: string; mimeType: 'image/png' } | { type: 'text'; text: string })[] = [];
+      for (const data of frameImages) {
+        content.push({ type: 'image' as const, data, mimeType: 'image/png' as const });
+      }
+
+      const d = delay ?? 150;
+      let text = `Sequence: ${frames.length} frames, ${d}ms delay\nframe_ids: ${frameIds.join(', ')}`;
+      if (truncated) text += `\nNote: path truncated to ${MAX_SEQUENCE_FRAMES} frames.`;
+
+      content.push({ type: 'text' as const, text });
+      return { content };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// --- spritesheet tool ---
+server.tool(
+  'spritesheet',
+  'Stitch multiple canvases into a single PNG spritesheet. Supports horizontal, vertical, or grid layout.',
+  {
+    frames: z.array(z.string()).min(1).max(MAX_SPRITESHEET_FRAMES).describe('Canvas IDs to stitch'),
+    direction: z.enum(['horizontal', 'vertical', 'grid']).optional().describe('Layout direction (default "horizontal")'),
+    columns: z.number().int().min(1).optional().describe('Columns for grid layout'),
+    gap: z.number().int().min(0).max(8).optional().describe('Pixel gap between frames (default 0)'),
+    scale: z.number().int().min(1).max(MAX_SCALE).optional().describe(`Scale factor (default ${DEFAULT_SCALE})`),
+    palette: z.string().optional().describe('Palette ID (default "pico8")'),
+  },
+  async ({ frames, direction, columns, gap, scale, palette: paletteId }) => {
+    try {
+      const pal = getPalette(paletteId);
+      const sprites = frames.map((id) => requireCanvas(id).data);
+      const dir = direction ?? 'horizontal';
+      const g = gap ?? 0;
+
+      let result: import('./types.js').SpriteData;
+      if (dir === 'horizontal') {
+        result = sprites.reduce((acc, s) => mergeHorizontal(acc, s, g));
+      } else if (dir === 'vertical') {
+        result = mergeVertical(sprites, g);
+      } else {
+        if (!columns) {
+          return { content: [{ type: 'text' as const, text: 'Error: "columns" is required for grid layout.' }], isError: true };
+        }
+        result = mergeGrid(sprites, columns, g);
+      }
+
+      const base64 = await renderToBase64(result, pal, scale);
+      const canvasId = storeCanvas({ data: result, width: result.width, height: result.height, palette: pal.id, prev: null });
+      const grid = inspectCanvas(canvasId, requireCanvas(canvasId));
+
+      return {
+        content: [
+          { type: 'image' as const, data: base64, mimeType: 'image/png' as const },
+          { type: 'text' as const, text: `canvas_id: ${canvasId}\nSpritesheet: ${frames.length} frames, ${dir}, ${result.width}x${result.height}px\n\n${grid}` },
         ],
       };
     } catch (err) {

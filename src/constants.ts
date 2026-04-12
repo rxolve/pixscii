@@ -78,3 +78,15 @@ export const CANVAS_ID_PREFIX = 'cvs';
 
 /** Threshold for switching from full inspect to region mode */
 export const INSPECT_FULL_THRESHOLD = 32;
+
+/** Maximum frames in a sequence */
+export const MAX_SEQUENCE_FRAMES = 32;
+
+/** Maximum actors in a sequence */
+export const MAX_SEQUENCE_ACTORS = 8;
+
+/** Maximum poses per actor */
+export const MAX_SEQUENCE_POSES = 8;
+
+/** Maximum frames in a spritesheet */
+export const MAX_SPRITESHEET_FRAMES = 32;

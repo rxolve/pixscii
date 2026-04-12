@@ -96,3 +96,31 @@ export function mergeHorizontal(left: SpriteData, right: SpriteData, gap: number
 
   return { width, height, pixels };
 }
+
+/** Merge sprites vertically (stacked top to bottom) */
+export function mergeVertical(sprites: SpriteData[], gap: number = 0): SpriteData {
+  if (sprites.length === 0) return createEmpty(0, 0);
+  if (sprites.length === 1) return sprites[0];
+  const width = Math.max(...sprites.map((s) => s.width));
+  const height = sprites.reduce((acc, s) => acc + s.height, 0) + gap * (sprites.length - 1);
+  let canvas = createEmpty(width, height);
+  let yOffset = 0;
+  for (const sprite of sprites) {
+    canvas = overlayPart(canvas, sprite, 0, yOffset);
+    yOffset += sprite.height + gap;
+  }
+  return canvas;
+}
+
+/** Merge sprites into a grid layout */
+export function mergeGrid(sprites: SpriteData[], columns: number, gap: number = 0): SpriteData {
+  if (sprites.length === 0) return createEmpty(0, 0);
+  const rows: SpriteData[][] = [];
+  for (let i = 0; i < sprites.length; i += columns) {
+    rows.push(sprites.slice(i, i + columns));
+  }
+  const rowSprites = rows.map((row) =>
+    row.reduce((acc, s) => mergeHorizontal(acc, s, gap)),
+  );
+  return mergeVertical(rowSprites, gap);
+}

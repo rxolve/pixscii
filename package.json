@@ -1,6 +1,6 @@
 {
   "name": "pixscii",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Pixel art creation MCP server for AI agents — draw, inspect, compose, and export pixel art",
   "mcpName": "io.github.rxolve/pixscii",
   "type": "module",
