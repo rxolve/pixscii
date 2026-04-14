@@ -3,15 +3,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import type { SpriteData } from './types.js';
+import { decodePixels } from './canvas.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SPRITES_DIR = path.join(__dirname, '..', 'sprites');
 
-/** Load a sprite JSON file from the sprites directory */
+/** Load a sprite JSON file from the sprites directory (supports both hex string and number array formats) */
 export async function loadSprite(filePath: string): Promise<SpriteData> {
   const full = path.join(SPRITES_DIR, filePath);
   const raw = await fs.readFile(full, 'utf-8');
-  return JSON.parse(raw);
+  const data = JSON.parse(raw);
+  return { width: data.width, height: data.height, pixels: decodePixels(data.pixels) };
 }
 
 /** Create an empty (transparent) sprite grid, or filled with a color */

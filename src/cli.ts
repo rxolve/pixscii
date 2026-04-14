@@ -8,6 +8,7 @@ import { loadPalettes, getPalette } from './palette.js';
 import { renderToBuffer } from './render.js';
 import { loadIndex, getById, loadSpriteData } from './store.js';
 import { quantizeToSprite } from './convert.js';
+import { encodePixels } from './canvas.js';
 import type { SpriteEntry } from './types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -87,7 +88,8 @@ async function importSprite(args: string[]): Promise<void> {
   const outDir = path.join(SPRITES_DIR, category);
   await fsPromises.mkdir(outDir, { recursive: true });
   const outPath = path.join(outDir, `${id}.json`);
-  await fsPromises.writeFile(outPath, JSON.stringify(sprite), 'utf-8');
+  const hexSprite = { width: sprite.width, height: sprite.height, pixels: encodePixels(sprite.pixels) };
+  await fsPromises.writeFile(outPath, JSON.stringify(hexSprite), 'utf-8');
 
   // Update index
   if (!skipIndex) {

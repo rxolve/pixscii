@@ -74,6 +74,22 @@ export function formatColor(index: number): string {
   return HEX_CHARS[index];
 }
 
+// --- Hex pixel encoding/decoding ---
+
+/** Encode number[][] → string[] (for JSON storage) */
+export function encodePixels(pixels: number[][]): string[] {
+  return pixels.map((row) => row.map(formatColor).join(''));
+}
+
+/** Decode string[] → number[][] (from JSON storage). Also accepts number[][] passthrough. */
+export function decodePixels(pixels: string[] | number[][]): number[][] {
+  if (pixels.length === 0) return [];
+  if (typeof pixels[0] === 'string') {
+    return (pixels as string[]).map((row) => [...row].map(parseColor));
+  }
+  return pixels as number[][];
+}
+
 // --- Inspect formatting ---
 
 export interface InspectOptions {

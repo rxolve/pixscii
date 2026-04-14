@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 
 import type { CharacterTemplate, PartData, SpriteData, CharacterOptions } from './types.js';
 import { overlayPart, recolorIndices } from './sprite.js';
+import { decodePixels } from './canvas.js';
 import { SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES } from './constants.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -35,7 +36,7 @@ export function selectIndex(hash: number, slot: number, count: number): number {
 
 // --- Loading ---
 
-async function loadJSON<T>(filePath: string): Promise<T> {
+async function loadJSON(filePath: string): Promise<any> {
   const raw = await fs.readFile(path.join(SPRITES_DIR, filePath), 'utf-8');
   return JSON.parse(raw);
 }
@@ -43,8 +44,9 @@ async function loadJSON<T>(filePath: string): Promise<T> {
 export async function loadCharacterAssets(): Promise<void> {
   // Load body templates
   for (const species of SPECIES) {
-    const data = await loadJSON<CharacterTemplate>(`characters/${species}.json`);
-    templates.set(species, data);
+    const data = await loadJSON(`characters/${species}.json`);
+    data.pixels = decodePixels(data.pixels);
+    templates.set(species, data as CharacterTemplate);
   }
 
   // Load parts
@@ -57,8 +59,9 @@ export async function loadCharacterAssets(): Promise<void> {
 
   for (const { dir, items } of partDirs) {
     for (const item of items) {
-      const data = await loadJSON<PartData>(`${dir}/${item}.json`);
-      parts.set(`${dir.split('/')[1]}/${item}`, data);
+      const data = await loadJSON(`${dir}/${item}.json`);
+      data.pixels = decodePixels(data.pixels);
+      parts.set(`${dir.split('/')[1]}/${item}`, data as PartData);
     }
   }
 }
