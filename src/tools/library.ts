@@ -32,8 +32,7 @@ export function register(server: McpServer): void {
       }
 
       let results = query ? search(query) : category ? getByCategory(category) : listAll();
-
-      if (category && query) {
+      if (query && category) {
         results = results.filter((e) => e.category === category);
       }
 

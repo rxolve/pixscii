@@ -28,7 +28,13 @@ export function register(server: McpServer): void {
     async ({ id, seed, motion, scale, palette: paletteId }) => {
       if (!id && !seed) {
         return {
-          content: [{ type: 'text' as const, text: 'Provide either "id" (sprite ID) or "seed" (character seed)' }],
+          content: [{ type: 'text' as const, text: 'Provide either "id" or "seed", not both or neither.' }],
+          isError: true,
+        };
+      }
+      if (id && seed) {
+        return {
+          content: [{ type: 'text' as const, text: 'Provide either "id" or "seed", not both.' }],
           isError: true,
         };
       }
@@ -160,8 +166,10 @@ export function register(server: McpServer): void {
       });
 
       let allFrames = composeAllFrames(scene);
+      let truncated = false;
       if (allFrames.length > MAX_SCENE_FRAMES) {
         allFrames = allFrames.slice(0, MAX_SCENE_FRAMES);
+        truncated = true;
       }
 
       const frameImages = await Promise.all(
@@ -181,7 +189,7 @@ export function register(server: McpServer): void {
       const actorLines = descriptions.map((desc: string) => `  - ${desc}`).join('\n');
       content.push({
         type: 'text' as const,
-        text: `Scene: ${width}x${height}, ${allFrames.length} frames, ${d}ms delay\nActors:\n${actorLines}\nframe_ids: ${frameIds.join(', ')}`,
+        text: `Scene: ${width}x${height}, ${allFrames.length} frames, ${d}ms delay\nActors:\n${actorLines}\nframe_ids: ${frameIds.join(', ')}${truncated ? `\nNote: truncated to ${MAX_SCENE_FRAMES} frames.` : ''}`,
       });
 
       return { content };

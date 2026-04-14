@@ -62,12 +62,12 @@ export function register(server: McpServer): void {
       const pal = getPalette(paletteId);
       const base64 = await renderToBase64(sprite, pal, scale);
       const canvasId = storeCanvas({ data: sprite, width: sprite.width, height: sprite.height, palette: pal.id, prev: null });
-      const grid2 = inspectCanvas(canvasId, requireCanvas(canvasId));
+      const gridText = inspectCanvas(canvasId, requireCanvas(canvasId));
 
       return {
         content: [
           { type: 'image' as const, data: base64, mimeType: 'image/png' as const },
-          { type: 'text' as const, text: `canvas_id: ${canvasId}\nTilemap: ${grid[0].length}x${grid.length} tiles (${sprite.width}x${sprite.height}px)\n\n${grid2}` },
+          { type: 'text' as const, text: `canvas_id: ${canvasId}\nTilemap: ${grid[0].length}x${grid.length} tiles (${sprite.width}x${sprite.height}px)\n\n${gridText}` },
         ],
       };
     },
