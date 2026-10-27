@@ -2,14 +2,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
 import { defineTool } from '../tool-utils.js';
-import { composeScene } from '../compose.js';
-import { buildTilemap } from '../tilemap.js';
-import { getPalette } from '../palette.js';
-import { renderToBase64 } from '../render.js';
-import { storeCanvas, requireCanvas, inspectCanvas } from '../canvas.js';
-import { mergeHorizontal, mergeVertical, mergeGrid } from '../sprite.js';
-import { DEFAULT_SCALE, MAX_SCALE, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_COMPOSE_LAYERS, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, MAX_SPRITESHEET_FRAMES } from '../constants.js';
-import type { SpriteData } from '../types.js';
+import { composeScene } from '../../core/compose.js';
+import { buildTilemap } from '../../core/tilemap.js';
+import { getPalette } from '../../core/palette.js';
+import { renderToBase64 } from '../../node/png.js';
+import { storeCanvas, requireCanvas, inspectCanvas } from '../../core/canvas.js';
+import { mergeHorizontal, mergeVertical, mergeGrid } from '../../core/sprite.js';
+import { DEFAULT_SCALE, MAX_SCALE, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_COMPOSE_LAYERS, MAX_TILEMAP_COLS, MAX_TILEMAP_ROWS, MAX_SPRITESHEET_FRAMES } from '../../core/constants.js';
+import type { SpriteData } from '../../core/types.js';
 
 export function register(server: McpServer): void {
   // --- compose tool ---

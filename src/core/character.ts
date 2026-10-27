@@ -1,14 +1,8 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 import type { CharacterTemplate, PartData, SpriteData, CharacterOptions } from './types.js';
 import { overlayPart, recolorIndices } from './sprite.js';
 import { decodePixels } from './canvas.js';
 import { SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES } from './constants.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SPRITES_DIR = path.join(__dirname, '..', 'sprites');
+import { assets } from './assets.js';
 
 // --- Cached data ---
 const templates = new Map<string, CharacterTemplate>();
@@ -37,8 +31,7 @@ export function selectIndex(hash: number, slot: number, count: number): number {
 // --- Loading ---
 
 async function loadJSON(filePath: string): Promise<any> {
-  const raw = await fs.readFile(path.join(SPRITES_DIR, filePath), 'utf-8');
-  return JSON.parse(raw);
+  return assets().readJSON(filePath);
 }
 
 export async function loadCharacterAssets(): Promise<void> {

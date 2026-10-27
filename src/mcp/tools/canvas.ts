@@ -2,12 +2,12 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
 import { defineTool } from '../tool-utils.js';
-import { getPalette } from '../palette.js';
-import { renderToBase64 } from '../render.js';
-import { createEmpty } from '../sprite.js';
-import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas } from '../canvas.js';
-import { setPixels, drawLine, drawRect, floodFill, mirrorH } from '../draw.js';
-import { DEFAULT_SCALE, MAX_SCALE, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_PIXELS_PER_BATCH } from '../constants.js';
+import { getPalette } from '../../core/palette.js';
+import { renderToBase64 } from '../../node/png.js';
+import { createEmpty } from '../../core/sprite.js';
+import { storeCanvas, requireCanvas, updateCanvas, setCanvasDirectly, parseColor, inspectCanvas } from '../../core/canvas.js';
+import { setPixels, drawLine, drawRect, floodFill, mirrorH } from '../../core/draw.js';
+import { DEFAULT_SCALE, MAX_SCALE, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_PIXELS_PER_BATCH } from '../../core/constants.js';
 
 export function register(server: McpServer): void {
   // --- create tool ---

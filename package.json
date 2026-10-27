@@ -1,12 +1,12 @@
 {
   "name": "pixscii",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Pixel art animation MCP server for AI agents — draw, animate, compose, and export pixel art",
   "mcpName": "io.github.rxolve/pixscii",
   "type": "module",
-  "main": "./dist/mcp.js",
+  "main": "./dist/mcp/server.js",
   "bin": {
-    "pixscii": "dist/mcp.js"
+    "pixscii": "dist/mcp/server.js"
   },
   "files": [
     "dist/",
@@ -15,7 +15,7 @@
     "README.md"
   ],
   "scripts": {
-    "dev": "tsx src/mcp.ts",
+    "dev": "tsx src/mcp/server.ts",
     "build": "tsc",
     "test": "vitest run",
     "prepublishOnly": "npm run build"
@@ -51,5 +51,14 @@
     "onlyBuiltDependencies": [
       "sharp"
     ]
+  },
+  "exports": {
+    ".": "./dist/mcp/server.js",
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./sprites/*": "./sprites/*",
+    "./package.json": "./package.json"
   }
 }

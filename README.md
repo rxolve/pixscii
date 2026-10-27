@@ -182,6 +182,43 @@ npx pixscii import sprite.png --id my-sword --category items
 npx pixscii export sword --scale 4 --out sword.png
 ```
 
+## Use in the Browser: `pixscii/core`
+
+Everything that draws, composes and renders also runs without Node. `pixscii/core` has no Node built-ins, no sharp and no MCP:
+
+```ts
+import { createEmpty, drawRect, registerPalette, getPalette, renderToRGBA } from 'pixscii/core';
+
+registerPalette({
+  id: 'dusk',
+  name: 'Dusk',
+  colors: [
+    { index: 0, hex: '#1A1016', name: 'sky' },
+    { index: 1, hex: '#E88FB0', name: 'sun' },
+    { index: 2, hex: '#3A2433', name: 'ground' },
+  ],
+});
+
+let scene = createEmpty(32, 18, 0);
+scene = drawRect(scene, 13, 4, 6, 6, 1, true);
+scene = drawRect(scene, 0, 12, 32, 6, 2, true);
+
+const { width, height, data } = renderToRGBA(scene, getPalette('dusk'), 8);
+canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(data), width, height), 0, 0);
+```
+
+Bundled sprites, palettes and characters load through an asset source. In Node the MCP server and CLI use the files in `sprites/`. Elsewhere, pass anything that can read those files:
+
+```ts
+import { setAssetSource, loadPalettes } from 'pixscii/core';
+
+setAssetSource({
+  readJSON: (file) => fetch(`/pixscii/sprites/${file}`).then((r) => r.json()),
+  list: async (dir) => (dir === 'palettes' ? ['pico8.json', 'gameboy.json', 'grayscale.json'] : []),
+});
+await loadPalettes();
+```
+
 ## Development
 
 ```bash
@@ -190,6 +227,16 @@ npm run dev      # Start MCP server (stdio)
 npm run build    # Compile TypeScript
 npm test         # Run tests
 ```
+
+```
+src/core/   pure TypeScript, runs anywhere (exported as pixscii/core)
+src/node/   sprites/ on disk, PNG encode and image import (sharp), CLI
+src/mcp/    MCP server and tools
+```
+
+`src/core/boundary.test.ts` fails if anything in core imports a Node built-in, sharp, MCP or a file outside core.
+
+See [ROADMAP.md](ROADMAP.md) for where pixscii is going: shapes, procedural landscapes and creatures.
 
 ## License
 

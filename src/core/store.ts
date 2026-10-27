@@ -1,20 +1,13 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 import { matchQuery, findById, filterByCategory, pickRandom, uniqueCategories } from './searchable.js';
 import { loadSprite } from './sprite.js';
 import type { SpriteEntry, SpriteData } from './types.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SPRITES_DIR = path.join(__dirname, '..', 'sprites');
+import { assets } from './assets.js';
 
 let entries: SpriteEntry[] = [];
 
 /** Load the sprite index */
 export async function loadIndex(): Promise<void> {
-  const raw = await fs.readFile(path.join(SPRITES_DIR, 'index.json'), 'utf-8');
-  entries = JSON.parse(raw);
+  entries = (await assets().readJSON('index.json')) as SpriteEntry[];
 }
 
 /** Search sprites by query string */

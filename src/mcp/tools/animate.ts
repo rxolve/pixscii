@@ -2,17 +2,17 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
 import { defineTool } from '../tool-utils.js';
-import { createAnimation, MOTION_TYPES } from '../animate.js';
-import { generateCharacter } from '../character.js';
-import { getById, loadSpriteData } from '../store.js';
-import { getPalette } from '../palette.js';
-import { renderToBase64 } from '../render.js';
-import { storeCanvas, requireCanvas } from '../canvas.js';
-import { composeAllFrames } from '../scene.js';
-import { buildScene } from '../scene-builder.js';
-import type { ActorDef, SceneDef } from '../scene.js';
-import type { SpriteData, MotionType } from '../types.js';
-import { DEFAULT_SCALE, DEFAULT_SCENE_DELAY, MAX_SCALE, MAX_SEED_LENGTH, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_SEQUENCE_FRAMES, MAX_SEQUENCE_ACTORS, MAX_SEQUENCE_POSES, MAX_SCENE_ACTORS, MAX_SCENE_FRAMES, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES } from '../constants.js';
+import { createAnimation, MOTION_TYPES } from '../../core/animate.js';
+import { generateCharacter } from '../../core/character.js';
+import { getById, loadSpriteData } from '../../core/store.js';
+import { getPalette } from '../../core/palette.js';
+import { renderToBase64 } from '../../node/png.js';
+import { storeCanvas, requireCanvas } from '../../core/canvas.js';
+import { composeAllFrames } from '../../core/scene.js';
+import { buildScene } from '../../core/scene-builder.js';
+import type { ActorDef, SceneDef } from '../../core/scene.js';
+import type { SpriteData, MotionType } from '../../core/types.js';
+import { DEFAULT_SCALE, DEFAULT_SCENE_DELAY, MAX_SCALE, MAX_SEED_LENGTH, MAX_CANVAS_WIDTH, MAX_CANVAS_HEIGHT, MAX_SEQUENCE_FRAMES, MAX_SEQUENCE_ACTORS, MAX_SEQUENCE_POSES, MAX_SCENE_ACTORS, MAX_SCENE_FRAMES, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES } from '../../core/constants.js';
 
 export function register(server: McpServer): void {
   // --- animate tool ---

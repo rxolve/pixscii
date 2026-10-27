@@ -2,17 +2,15 @@ import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import { fileURLToPath } from 'url';
 
-import { loadPalettes, getPalette } from './palette.js';
-import { renderToBuffer } from './render.js';
-import { loadIndex, getById, loadSpriteData } from './store.js';
+import { loadPalettes, getPalette } from '../core/palette.js';
+import { renderToBuffer } from './png.js';
+import { loadIndex, getById, loadSpriteData } from '../core/store.js';
 import { quantizeToSprite } from './convert.js';
-import { encodePixels } from './canvas.js';
-import type { SpriteEntry } from './types.js';
+import { encodePixels } from '../core/canvas.js';
+import type { SpriteEntry } from '../core/types.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SPRITES_DIR = path.join(__dirname, '..', 'sprites');
+import { SPRITES_DIR, useDiskAssets } from './assets.js';
 
 /** Parse CLI args into a flags map */
 function parseArgs(args: string[]): { positional: string[]; flags: Record<string, string> } {
@@ -159,6 +157,7 @@ async function exportSprite(args: string[]): Promise<void> {
 
 /** CLI entry point */
 export async function runCLI(args: string[]): Promise<void> {
+  useDiskAssets();
   const subcommand = args[0];
   const rest = args.slice(1);
 
