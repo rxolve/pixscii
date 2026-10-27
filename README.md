@@ -45,7 +45,7 @@ Or add to your MCP client config:
 }
 ```
 
-## Tools (23)
+## Tools (25)
 
 ### High-Level — Full scenes in one call
 
@@ -62,6 +62,8 @@ Or add to your MCP client config:
 | `character` | Generate a procedural pixel character |
 | `convert` | Quantize any image (URL or base64) to pixel art |
 | `search` | Browse the sprite library |
+| `creature` | Endless symmetric robots, aliens and critters from a mask and a seed, or an asymmetric nebula |
+| `being` | A 24×24 person, cat or elf as a baby, an adult or old |
 | `landscape` | Generate a landscape from a seed: sky by time of day, sun or moon, stars, clouds, mountains, hills, sea, forest, ground, rain |
 
 ### Mutate — Draw on a canvas
@@ -130,6 +132,17 @@ landscape { "seed": "pine-ridge", "time": "dawn", "layers": ["sky", "sun", "moun
 ```
 
 Presets match the scene palettes: `dawn`, `home`, `school`, `night`, `sea`, `storm`, `window`, `forest`, `dusk`, `stars`. Layers: sky (dithered gradient), stars, sun or moon (with a halo, and glitter on water), clouds, mountains (midpoint-displacement ridge), hills (value noise), sea (waves), forest (pines and round trees), ground, rain. Default size 128×72. In code: `landscape({ seed, preset })`.
+
+## Creatures and Beings
+
+`creature` mirrors a mask filled by the seed (body, maybe-body, empty), drops stray pixels, outlines it, lights it from the top and gives it eyes. Kinds: `robot`, `alien`, `critter`, plus `nebula` (asymmetric noise cloud with caught stars). `being` draws a person, cat or elf at a life stage from shapes: babies have big heads and no legs, old people white hair and a cane, old elves a staff, old cats a rounder body and a lowered tail.
+
+```json
+creature { "seed": "voyager-7", "kind": "robot" }
+being { "species": "elf", "stage": "old", "palette": "scene-forest" }
+```
+
+Both use the scene schema, so they sit on a `landscape` in the same palette.
 
 ## Three Layers of Control
 

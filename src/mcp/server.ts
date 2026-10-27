@@ -14,6 +14,7 @@ import { register as registerAnimate } from './tools/animate.js';
 import { register as registerPalette } from './tools/palette.js';
 import { register as registerShapes } from './tools/shapes.js';
 import { register as registerLandscape } from './tools/landscape.js';
+import { register as registerCreature } from './tools/creature.js';
 
 // Route import/export subcommands to CLI before starting MCP server
 const subcommand = process.argv[2];
@@ -25,7 +26,7 @@ if (subcommand === 'import' || subcommand === 'export') {
 
 const server = new McpServer({
   name: 'pixscii',
-  version: '0.4.0',
+  version: '0.5.0',
 });
 
 registerLibrary(server);
@@ -35,6 +36,7 @@ registerAnimate(server);
 registerPalette(server);
 registerShapes(server);
 registerLandscape(server);
+registerCreature(server);
 
 async function main() {
   useDiskAssets();
