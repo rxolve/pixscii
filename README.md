@@ -45,7 +45,7 @@ Or add to your MCP client config:
 }
 ```
 
-## Tools (22)
+## Tools (23)
 
 ### High-Level — Full scenes in one call
 
@@ -62,6 +62,7 @@ Or add to your MCP client config:
 | `character` | Generate a procedural pixel character |
 | `convert` | Quantize any image (URL or base64) to pixel art |
 | `search` | Browse the sprite library |
+| `landscape` | Generate a landscape from a seed: sky by time of day, sun or moon, stars, clouds, mountains, hills, sea, forest, ground, rain |
 
 ### Mutate — Draw on a canvas
 
@@ -117,6 +118,18 @@ shapes {
 ```
 
 Then `repalette` to `scene-sea` or `scene-night` for the same picture in another mood. In code: `drawShapes(sprite, shapes, palette)`.
+
+## Landscapes from a Seed
+
+`landscape` builds a whole scene from a seed in the scene schema, so one seed is one place you can show in any mood:
+
+```json
+landscape { "seed": "harbor-town", "preset": "dusk" }
+landscape { "seed": "harbor-town", "preset": "dusk", "palette": "scene-night" }
+landscape { "seed": "pine-ridge", "time": "dawn", "layers": ["sky", "sun", "mountains", "forest", "ground"] }
+```
+
+Presets match the scene palettes: `dawn`, `home`, `school`, `night`, `sea`, `storm`, `window`, `forest`, `dusk`, `stars`. Layers: sky (dithered gradient), stars, sun or moon (with a halo, and glitter on water), clouds, mountains (midpoint-displacement ridge), hills (value noise), sea (waves), forest (pines and round trees), ground, rain. Default size 128×72. In code: `landscape({ seed, preset })`.
 
 ## Three Layers of Control
 

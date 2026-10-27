@@ -77,7 +77,7 @@ A pixel-native rasterizer, so an agent writes geometry instead of pixels:
 - no anti-aliasing: every pixel is one palette index
 - input is a JSON list of shapes. New MCP tool `shapes` draws a list onto a canvas
 
-### M4: procedural landscapes
+### M4: procedural landscapes, done
 
 - sky by time of day (dawn, noon, dusk, night) as a dithered gradient, sun or moon, seeded star field
 - layered hills and mountains from 1D noise ridges, sea as wave bands, forest as tree silhouettes, ground strip
