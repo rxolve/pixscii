@@ -84,7 +84,7 @@ A pixel-native rasterizer, so an agent writes geometry instead of pixels:
 - `landscape({ seed, width, height, time, layers })` plus an MCP tool
 - target: any of Light a Soul's moods at 128×72 in one call
 
-### M5: creatures
+### M5: creatures, done. M2-M5 ship as 0.5.0
 
 - mask generator: a half template whose cells are body, maybe-body or empty, mirrored, filled and shaded from a seed.
   Endless robots, aliens, nebula blobs

@@ -15,6 +15,7 @@ export * from './sprite.js';
 export * from './draw.js';
 export * from './shapes.js';
 export * from './landscape.js';
+export * from './creature.js';
 export * from './render.js';
 export * from './quantize.js';
 export * from './searchable.js';
