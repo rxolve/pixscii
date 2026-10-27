@@ -13,6 +13,7 @@ export * from './slots.js';
 export * from './canvas.js';
 export * from './sprite.js';
 export * from './draw.js';
+export * from './shapes.js';
 export * from './render.js';
 export * from './quantize.js';
 export * from './searchable.js';
