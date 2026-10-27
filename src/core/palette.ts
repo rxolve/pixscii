@@ -33,6 +33,11 @@ export function registerPalette(palette: Palette): void {
   palettes.set(palette.id, palette);
 }
 
+/** Get a palette by ID, or undefined if it is not loaded */
+export function findPalette(id: string): Palette | undefined {
+  return palettes.get(id);
+}
+
 /** Get a palette by ID, falls back to default */
 export function getPalette(id?: string): Palette {
   const p = palettes.get(id ?? DEFAULT_PALETTE);

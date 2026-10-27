@@ -45,7 +45,7 @@ Or add to your MCP client config:
 }
 ```
 
-## Tools (19)
+## Tools (21)
 
 ### High-Level — Full scenes in one call
 
@@ -90,6 +90,13 @@ Or add to your MCP client config:
 | `spritesheet` | Stitch frames into a single PNG (horizontal/vertical/grid) |
 | `animate` | Animate a sprite with pixel motion (idle, walk, attack...) |
 | `export` | Render a canvas to scaled PNG |
+
+### Palette — Recolor by mood
+
+| Tool | Description |
+|------|-------------|
+| `palettes` | List palettes and their named slots (filter by schema) |
+| `repalette` | Switch a canvas to another palette: same schema keeps pixels, others map by slot name or nearest color |
 
 ## Three Layers of Control
 
@@ -171,7 +178,9 @@ Every pixel is one character. The agent reads and writes in the same alphabet:
 **648 procedural characters:**
 4 species (human, elf, dwarf, skeleton) x 3 armors x 3 weapons x 3 helms x 6 skin tones.
 
-**3 palettes:** pico8 (default), grayscale, gameboy
+**13 palettes:** pico8 (default), grayscale, gameboy, and 10 scene moods (`scene-dawn`, `home`, `school`, `night`, `sea`, `storm`, `window`, `forest`, `dusk`, `stars`)
+
+The scene palettes share one **schema**: the same 16 named slots (`ink`, `sky-top`, `sky-mid`, `sky-low`, `sun`, `cloud`, `far`, `mid`, `near`, `ground`, `water`, `foam`, `accent`, `skin`, `cloth`, `light`). Draw once with those slots, then render with any scene palette to get the same picture in another mood. In code: `SCENE.ground`, `slotIndex(palette, 'water')`, `remapPalette(sprite, from, to)`.
 
 **6 motion types:** idle, walk, attack, hurt, bounce, blink
 

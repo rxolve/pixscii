@@ -12,6 +12,11 @@ export interface PaletteColor {
 export interface Palette {
   id: string;
   name: string;
+  /**
+   * Palettes with the same schema use each index for the same role and name it the same
+   * (e.g. "scene": 1 = sky-top, 9 = ground). Swapping between them recolors any art drawn for that schema.
+   */
+  schema?: string;
   colors: PaletteColor[];
 }
 

@@ -1,0 +1,23 @@
+{
+  "id": "scene-sea",
+  "name": "Scene: Sea",
+  "schema": "scene",
+  "colors": [
+    { "index": 0, "hex": "#0C1820", "name": "ink" },
+    { "index": 1, "hex": "#3A7FA8", "name": "sky-top" },
+    { "index": 2, "hex": "#7CC0D8", "name": "sky-mid" },
+    { "index": 3, "hex": "#CDEFF0", "name": "sky-low" },
+    { "index": 4, "hex": "#FFF6C0", "name": "sun" },
+    { "index": 5, "hex": "#F0FAFA", "name": "cloud" },
+    { "index": 6, "hex": "#5A8AA0", "name": "far" },
+    { "index": 7, "hex": "#3A6A80", "name": "mid" },
+    { "index": 8, "hex": "#24485A", "name": "near" },
+    { "index": 9, "hex": "#C8B48A", "name": "ground" },
+    { "index": 10, "hex": "#1E6A8A", "name": "water" },
+    { "index": 11, "hex": "#BFF0F5", "name": "foam" },
+    { "index": 12, "hex": "#6FD3E0", "name": "accent" },
+    { "index": 13, "hex": "#F0C8A0", "name": "skin" },
+    { "index": 14, "hex": "#2A4A6A", "name": "cloth" },
+    { "index": 15, "hex": "#F8FFFF", "name": "light" }
+  ]
+}

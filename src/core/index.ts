@@ -9,6 +9,7 @@ export * from './types.js';
 export * from './constants.js';
 export * from './assets.js';
 export * from './palette.js';
+export * from './slots.js';
 export * from './canvas.js';
 export * from './sprite.js';
 export * from './draw.js';

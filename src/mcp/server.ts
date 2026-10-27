@@ -11,6 +11,7 @@ import { register as registerLibrary } from './tools/library.js';
 import { register as registerCanvas } from './tools/canvas.js';
 import { register as registerCompose } from './tools/compose.js';
 import { register as registerAnimate } from './tools/animate.js';
+import { register as registerPalette } from './tools/palette.js';
 
 // Route import/export subcommands to CLI before starting MCP server
 const subcommand = process.argv[2];
@@ -29,6 +30,7 @@ registerLibrary(server);
 registerCanvas(server);
 registerCompose(server);
 registerAnimate(server);
+registerPalette(server);
 
 async function main() {
   useDiskAssets();
