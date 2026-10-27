@@ -45,7 +45,7 @@ Or add to your MCP client config:
 }
 ```
 
-## Tools (21)
+## Tools (22)
 
 ### High-Level — Full scenes in one call
 
@@ -72,6 +72,7 @@ Or add to your MCP client config:
 | `rect` | Rectangle — outline or filled |
 | `fill` | Flood fill from a point (with leak detection) |
 | `mirror` | Mirror left half to right half |
+| `shapes` | Draw geometry as crisp pixel art: rect, circle, ellipse, polygon, line, curve, with dithered fills and gradients |
 | `undo` | Revert the last drawing operation |
 
 ### Observe — Read the canvas state
@@ -97,6 +98,25 @@ Or add to your MCP client config:
 |------|-------------|
 | `palettes` | List palettes and their named slots (filter by schema) |
 | `repalette` | Switch a canvas to another palette: same schema keeps pixels, others map by slot name or nearest color |
+
+## Shapes: Write Geometry, Get Pixels
+
+LLMs can't place pixels well, but they write coordinates fine. `shapes` rasterizes geometry at pixel centers with no anti-aliasing, so every pixel is one palette index. Soft fills come from ordered dithering:
+
+```json
+shapes {
+  "width": 128, "height": 72, "palette": "scene-dusk",
+  "shapes": [
+    { "type": "rect", "x": 0, "y": 0, "w": 128, "h": 46, "fill": { "gradient": ["sky-top", "sky-mid", "sky-low"] } },
+    { "type": "circle", "cx": 92, "cy": 40, "r": 9, "fill": "sun" },
+    { "type": "polygon", "points": [[0,46],[22,26],[40,38],[62,20],[90,42],[128,40],[128,48],[0,48]], "fill": "far" },
+    { "type": "rect", "x": 0, "y": 46, "w": 128, "h": 26, "fill": { "gradient": ["water", "near"] } },
+    { "type": "curve", "points": [[34,56],[44,44],[56,56]], "color": "accent" }
+  ]
+}
+```
+
+Then `repalette` to `scene-sea` or `scene-night` for the same picture in another mood. In code: `drawShapes(sprite, shapes, palette)`.
 
 ## Three Layers of Control
 

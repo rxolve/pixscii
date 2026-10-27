@@ -67,7 +67,7 @@ Today the pure part is already most of the code: `animate`, `canvas`, `compose`,
 - `inspect` shows slot names
 - Ship one schema with Light a Soul's nine moods as the example set
 
-### M3: shapes
+### M3: shapes, done
 
 A pixel-native rasterizer, so an agent writes geometry instead of pixels:
 
