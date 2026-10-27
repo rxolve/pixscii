@@ -60,7 +60,7 @@ Today the pure part is already most of the code: `animate`, `canvas`, `compose`,
   for the browser with esbuild
 - Release as 0.4.0
 
-### M2: slot palettes
+### M2: slot palettes, done
 
 - A palette can name its indices as slots. Mood palettes share one slot schema
 - `remap(grid, fromPalette, toPalette)` by slot name

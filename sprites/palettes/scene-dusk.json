@@ -1,0 +1,23 @@
+{
+  "id": "scene-dusk",
+  "name": "Scene: Dusk",
+  "schema": "scene",
+  "colors": [
+    { "index": 0, "hex": "#1A1016", "name": "ink" },
+    { "index": 1, "hex": "#2E1A3A", "name": "sky-top" },
+    { "index": 2, "hex": "#7A3A5E", "name": "sky-mid" },
+    { "index": 3, "hex": "#F08A6A", "name": "sky-low" },
+    { "index": 4, "hex": "#FFC07A", "name": "sun" },
+    { "index": 5, "hex": "#C06A7A", "name": "cloud" },
+    { "index": 6, "hex": "#4A2A44", "name": "far" },
+    { "index": 7, "hex": "#341E32", "name": "mid" },
+    { "index": 8, "hex": "#221420", "name": "near" },
+    { "index": 9, "hex": "#3A2430", "name": "ground" },
+    { "index": 10, "hex": "#3A3A5A", "name": "water" },
+    { "index": 11, "hex": "#C890A8", "name": "foam" },
+    { "index": 12, "hex": "#E88FB0", "name": "accent" },
+    { "index": 13, "hex": "#E0A890", "name": "skin" },
+    { "index": 14, "hex": "#6A3A5A", "name": "cloth" },
+    { "index": 15, "hex": "#FBE0E8", "name": "light" }
+  ]
+}

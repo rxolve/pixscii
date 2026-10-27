@@ -1,0 +1,23 @@
+{
+  "id": "scene-school",
+  "name": "Scene: School",
+  "schema": "scene",
+  "colors": [
+    { "index": 0, "hex": "#121A14", "name": "ink" },
+    { "index": 1, "hex": "#4F8FBF", "name": "sky-top" },
+    { "index": 2, "hex": "#8EC3E0", "name": "sky-mid" },
+    { "index": 3, "hex": "#D8EECF", "name": "sky-low" },
+    { "index": 4, "hex": "#FFF2A8", "name": "sun" },
+    { "index": 5, "hex": "#F4FBF2", "name": "cloud" },
+    { "index": 6, "hex": "#7AA38A", "name": "far" },
+    { "index": 7, "hex": "#5A8A52", "name": "mid" },
+    { "index": 8, "hex": "#3A6A3A", "name": "near" },
+    { "index": 9, "hex": "#8A7A4A", "name": "ground" },
+    { "index": 10, "hex": "#4A90B0", "name": "water" },
+    { "index": 11, "hex": "#C8EEF5", "name": "foam" },
+    { "index": 12, "hex": "#9FD27A", "name": "accent" },
+    { "index": 13, "hex": "#F0C8A0", "name": "skin" },
+    { "index": 14, "hex": "#3A5A8A", "name": "cloth" },
+    { "index": 15, "hex": "#FBFBF0", "name": "light" }
+  ]
+}

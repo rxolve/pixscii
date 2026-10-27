@@ -1,5 +1,6 @@
 import type { SpriteData, Canvas } from './types.js';
 import { MAX_CANVAS_COUNT, CANVAS_ID_PREFIX, INSPECT_FULL_THRESHOLD } from './constants.js';
+import { findPalette } from './palette.js';
 
 // --- Canvas store ---
 
@@ -136,9 +137,13 @@ function formatHeader(id: string, canvas: Canvas): string {
   lines.push(`size: ${width}x${height} | palette: ${palette} | non-transparent: ${filled}/${total}`);
 
   if (stats.size > 0) {
+    const pal = findPalette(palette);
     const parts = [...stats.entries()]
       .sort((a, b) => a[0] - b[0])
-      .map(([idx, cnt]) => `${formatColor(idx)}=${cnt}`);
+      .map(([idx, cnt]) => {
+        const name = pal?.colors.find((c) => c.index === idx)?.name;
+        return `${formatColor(idx)}=${cnt}` + (name ? `(${name})` : '');
+      });
     lines.push(`colors: ${parts.join(' ')}`);
   }
 
