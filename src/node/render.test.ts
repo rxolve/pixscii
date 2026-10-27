@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { expandToRGBA, scaleNearestNeighbor, renderToBase64 } from './render.js';
-import { loadPalettes, getPalette } from './palette.js';
-import type { SpriteData, Palette } from './types.js';
+import { expandToRGBA, scaleNearestNeighbor } from '../core/render.js';
+import { renderToBase64 } from './png.js';
+import { loadPalettes, getPalette } from '../core/palette.js';
+import type { SpriteData, Palette } from '../core/types.js';
 
 let palette: Palette;
 

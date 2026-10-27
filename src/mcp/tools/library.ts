@@ -2,14 +2,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
 import { defineTool } from '../tool-utils.js';
-import { search, getById, getByCategory, getRandom, listCategories, listAll, loadSpriteData } from '../store.js';
-import { getPalette } from '../palette.js';
-import { renderToBase64 } from '../render.js';
-import { generateCharacter, describeCharacter } from '../character.js';
-import { resolveImageInput } from '../resolve.js';
-import { quantizeToSprite } from '../convert.js';
-import { storeCanvas, requireCanvas, inspectCanvas } from '../canvas.js';
-import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES } from '../constants.js';
+import { search, getById, getByCategory, getRandom, listCategories, listAll, loadSpriteData } from '../../core/store.js';
+import { getPalette } from '../../core/palette.js';
+import { renderToBase64 } from '../../node/png.js';
+import { generateCharacter, describeCharacter } from '../../core/character.js';
+import { resolveImageInput } from '../../node/resolve.js';
+import { quantizeToSprite } from '../../node/convert.js';
+import { storeCanvas, requireCanvas, inspectCanvas } from '../../core/canvas.js';
+import { DEFAULT_SCALE, MAX_SCALE, MAX_SEED_LENGTH, SPECIES, ARMORS, WEAPONS, HELMS, SKIN_TONES } from '../../core/constants.js';
 
 export function register(server: McpServer): void {
   // --- search tool ---

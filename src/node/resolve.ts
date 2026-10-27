@@ -1,4 +1,4 @@
-import { MAX_BASE64_SIZE, MAX_FETCH_SIZE } from './constants.js';
+import { MAX_BASE64_SIZE, MAX_FETCH_SIZE } from '../core/constants.js';
 
 export class ConvertInputError extends Error {
   constructor(message: string) {

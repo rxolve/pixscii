@@ -1,32 +1,30 @@
-import sharp from 'sharp';
-
-import type { Palette, RGBA, SpriteData } from './types.js';
+import type { Palette, SpriteData } from './types.js';
 import { resolveColor } from './palette.js';
 import { DEFAULT_SCALE, MAX_SCALE } from './constants.js';
 
+/** Raw RGBA pixels, 4 bytes per pixel, row by row (same layout as browser ImageData) */
+export interface RGBAImage {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+
 /** Expand sprite pixel indices to RGBA buffer */
-export function expandToRGBA(sprite: SpriteData, palette: Palette): Buffer {
+export function expandToRGBA(sprite: SpriteData, palette: Palette): Uint8Array {
   const { width, height, pixels } = sprite;
-  const buf = Buffer.alloc(width * height * 4);
+  const buf = new Uint8Array(width * height * 4);
 
   for (let y = 0; y < height; y++) {
     const row = pixels[y];
     for (let x = 0; x < width; x++) {
       const idx = row?.[x] ?? -1;
       const offset = (y * width + x) * 4;
-      if (idx < 0) {
-        // transparent
-        buf[offset] = 0;
-        buf[offset + 1] = 0;
-        buf[offset + 2] = 0;
-        buf[offset + 3] = 0;
-      } else {
-        const [r, g, b, a] = resolveColor(palette, idx);
-        buf[offset] = r;
-        buf[offset + 1] = g;
-        buf[offset + 2] = b;
-        buf[offset + 3] = a;
-      }
+      if (idx < 0) continue; // transparent: already zero
+      const [r, g, b, a] = resolveColor(palette, idx);
+      buf[offset] = r;
+      buf[offset + 1] = g;
+      buf[offset + 2] = b;
+      buf[offset + 3] = a;
     }
   }
 
@@ -35,14 +33,14 @@ export function expandToRGBA(sprite: SpriteData, palette: Palette): Buffer {
 
 /** Scale RGBA buffer using nearest-neighbor interpolation */
 export function scaleNearestNeighbor(
-  buf: Buffer,
+  buf: Uint8Array,
   srcWidth: number,
   srcHeight: number,
   scale: number,
-): Buffer {
+): Uint8Array {
   const dstWidth = srcWidth * scale;
   const dstHeight = srcHeight * scale;
-  const dst = Buffer.alloc(dstWidth * dstHeight * 4);
+  const dst = new Uint8Array(dstWidth * dstHeight * 4);
 
   for (let dy = 0; dy < dstHeight; dy++) {
     const sy = Math.floor(dy / scale);
@@ -60,31 +58,13 @@ export function scaleNearestNeighbor(
   return dst;
 }
 
-/** Render sprite to PNG buffer */
-export async function renderToBuffer(
-  sprite: SpriteData,
-  palette: Palette,
-  scale?: number,
-): Promise<Buffer> {
+/** Render a sprite to scaled RGBA pixels. In a browser, wrap `data` in ImageData and put it on a canvas */
+export function renderToRGBA(sprite: SpriteData, palette: Palette, scale?: number): RGBAImage {
   const s = Math.max(1, Math.min(scale ?? DEFAULT_SCALE, MAX_SCALE));
   const rgba = expandToRGBA(sprite, palette);
-  const scaled = s === 1 ? rgba : scaleNearestNeighbor(rgba, sprite.width, sprite.height, s);
-  const width = sprite.width * s;
-  const height = sprite.height * s;
-
-  return sharp(scaled, {
-    raw: { width, height, channels: 4 },
-  })
-    .png()
-    .toBuffer();
-}
-
-/** Render sprite to PNG base64 string */
-export async function renderToBase64(
-  sprite: SpriteData,
-  palette: Palette,
-  scale?: number,
-): Promise<string> {
-  const buf = await renderToBuffer(sprite, palette, scale);
-  return buf.toString('base64');
+  return {
+    width: sprite.width * s,
+    height: sprite.height * s,
+    data: s === 1 ? rgba : scaleNearestNeighbor(rgba, sprite.width, sprite.height, s),
+  };
 }

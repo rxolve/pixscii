@@ -6,14 +6,14 @@ import os from 'os';
 import sharp from 'sharp';
 import { fileURLToPath } from 'url';
 
-import { loadPalettes, getPalette, resolveColor } from './palette.js';
-import { loadIndex, getById, loadSpriteData } from './store.js';
-import { renderToBuffer } from './render.js';
+import { loadPalettes, getPalette, resolveColor } from '../core/palette.js';
+import { loadIndex, getById, loadSpriteData } from '../core/store.js';
+import { renderToBuffer } from './png.js';
 import { quantizeToSprite } from './convert.js';
-import type { Palette, SpriteData, SpriteEntry } from './types.js';
+import type { Palette, SpriteData, SpriteEntry } from '../core/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SPRITES_DIR = path.join(__dirname, '..', 'sprites');
+const SPRITES_DIR = path.join(__dirname, '..', '..', 'sprites');
 
 let palette: Palette;
 let tmpDir: string;

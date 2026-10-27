@@ -1,12 +1,6 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 import type { Palette, RGBA } from './types.js';
 import { DEFAULT_PALETTE } from './constants.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PALETTES_DIR = path.join(__dirname, '..', 'sprites', 'palettes');
+import { assets } from './assets.js';
 
 const palettes = new Map<string, Palette>();
 const colorCache = new Map<string, RGBA>();
@@ -27,13 +21,16 @@ export function hexToRGBA(hex: string): RGBA {
 
 /** Load all palette JSON files from sprites/palettes/ */
 export async function loadPalettes(): Promise<void> {
-  const files = await fs.readdir(PALETTES_DIR);
+  const files = await assets().list('palettes');
   for (const file of files) {
     if (!file.endsWith('.json')) continue;
-    const raw = await fs.readFile(path.join(PALETTES_DIR, file), 'utf-8');
-    const palette: Palette = JSON.parse(raw);
-    palettes.set(palette.id, palette);
+    registerPalette((await assets().readJSON(`palettes/${file}`)) as Palette);
   }
+}
+
+/** Add or replace a palette without going through sprites/ (e.g. one built in code) */
+export function registerPalette(palette: Palette): void {
+  palettes.set(palette.id, palette);
 }
 
 /** Get a palette by ID, falls back to default */

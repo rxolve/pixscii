@@ -50,13 +50,14 @@ Today the pure part is already most of the code: `animate`, `canvas`, `compose`,
 
 ## Milestones
 
-### M1: core split (no behavior change)
+### M1: core split (no behavior change), done in 0.4.0
 
 - Move pure modules under `src/core/`. Asset loading goes behind a small loader interface: the Node adapter reads
   `sprites/`, a browser build imports the JSON
 - `render` returns an RGBA buffer in core; PNG and GIF encoding stays in the Node adapter
 - Add the `pixscii/core` export
-- All existing tests pass. Add one check that bundles `src/core` for the browser and fails on any Node built-in
+- All existing tests pass. `src/core/boundary.test.ts` fails when core imports a Node built-in, and `dist/core` bundles
+  for the browser with esbuild
 - Release as 0.4.0
 
 ### M2: slot palettes
@@ -99,7 +100,8 @@ A pixel-native rasterizer, so an agent writes geometry instead of pixels:
 - Growing the bundled library by hand as the main way to add range
 - Changes to artscii
 
-## Open before M1
+## Decided
 
-- The unmerged branch `claude/pixel-os-investigation-qUXMr` adds kill, copy, shift, resize, palettes, stat, alias and
-  crop. Some of it overlaps M1 and M2 (crop, resize, palettes). Decide to merge, cherry-pick or drop it first
+- **`claude/pixel-os-investigation-qUXMr` is not merged.** It branched from 0.2.2, before the tool modules split (#1),
+  32×32 sprites and hex string storage, and it rewrites the old single `mcp.ts`. Its pure grid helpers (`crop`, `resize`,
+  `shift` in `draw.ts`) and `repalette` are worth porting into core when M2 and M3 need them. The branch stays as it is
